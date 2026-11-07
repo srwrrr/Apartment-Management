@@ -16,7 +16,9 @@ export function Layout() {
     { to: '/', label: t('nav.home'), show: true },
     { to: '/units', label: t('nav.units'), show: can('units.manage') || can('residents.manage') },
     { to: '/residents', label: t('nav.residents'), show: can('residents.manage') },
+    { to: '/directory', label: t('nav.directory'), show: can('directory.view') },
     { to: '/staff', label: t('nav.staff'), show: user?.role === 'ADMIN' },
+    { to: '/import', label: t('nav.import'), show: user?.role === 'ADMIN' },
     { to: '/profile', label: t('nav.profile'), show: user?.role === 'RESIDENT' },
   ];
 
@@ -25,10 +27,10 @@ export function Layout() {
 
   return (
     <div className="min-h-screen">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:p-2">
+      <a href="#main" className="no-print sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:p-2">
         {t('common.skipToContent')}
       </a>
-      <header className="border-b border-line bg-surface">
+      <header className="no-print border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div>
             <p className="text-lg font-bold text-brand-700">{t('app.building')}</p>

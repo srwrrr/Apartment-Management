@@ -11,6 +11,8 @@ import { occupanciesRouter, unitOccupanciesRouter } from './modules/users/occupa
 import { residentsRouter } from './modules/users/residents.routes';
 import { staffRouter, usersRouter } from './modules/users/staff.routes';
 import { meRouter } from './modules/users/me.routes';
+import { importRouter } from './modules/users/import.routes';
+import { directoryRouter } from './modules/users/directory.routes';
 import { preferencesRouter } from './modules/users/preferences.routes';
 
 export function createApp() {
@@ -39,6 +41,8 @@ export function createApp() {
   app.use('/api/residents', residentsRouter);
   app.use('/api/staff', staffRouter);
   app.use('/api/users', usersRouter);
+  app.use('/api/import', importRouter);
+  app.use('/api/directory', directoryRouter);
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: { code: 'NOT_FOUND' } });

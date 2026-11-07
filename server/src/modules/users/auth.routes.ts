@@ -11,9 +11,12 @@ import { changePassword, verifyLogin } from './auth.service';
 export const authRouter = Router();
 
 // NFR-07: slow down password guessing from one address (account lockout is separate, per user).
+// Only FAILED attempts count: a whole building often shares one Wi-Fi address, and many residents
+// logging in successfully must never lock each other out.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60_000,
   limit: 30,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => config.NODE_ENV === 'test',

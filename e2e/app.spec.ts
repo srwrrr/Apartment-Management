@@ -320,3 +320,114 @@ test.describe('FR-47 / FR-55 language and text size', () => {
     await ctx.close();
   });
 });
+
+const csvFile = (name: string, text: string) => ({ name, mimeType: 'text/csv', buffer: Buffer.from(text, 'utf8') });
+
+test.describe('FR-42 bulk import and FR-08 directory', () => {
+  test('a file with problems shows the exact line and reason, and nothing can be imported', async ({ page }) => {
+    await login(page, ADMIN);
+    await page.goto('/import');
+    const n = unique().slice(-5).toUpperCase();
+    await page.getByTestId('file-units').setInputFiles(
+      csvFile('units.csv', `unit_number,floor\r\nA${n},1\r\n,2\r\nB${n},abc\r\nA${n},3\r\n`),
+    );
+    await expect(page.getByText('3 problems found. Nothing was saved.')).toBeVisible();
+    await expect(page.getByRole('row', { name: /3\s+unit_number\s+This value is required\./ })).toBeVisible();
+    await expect(page.getByRole('row', { name: /4\s+floor\s+Floor must be a whole number/ })).toBeVisible();
+    await expect(page.getByRole('row', { name: /5\s+unit_number\s+This unit number appears twice/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Import \d+ rows$/ })).toHaveCount(0);
+    await noSidewaysScroll(page);
+  });
+
+  test('imports units, then residents; temporary passwords work; directory shows who lives where', async ({ page, browser }) => {
+    const n = unique().slice(-5).toUpperCase();
+    const uA = `I${n}A`;
+    const uB = `I${n}B`;
+    await login(page, ADMIN);
+    await page.goto('/import');
+
+    // 1. units
+    await page.getByTestId('file-units').setInputFiles(csvFile('units.csv', `unit_number,floor,bedrooms\r\n${uA},7,3\r\n${uB},7,2\r\n`));
+    await expect(page.getByText('The file is ready: 2 rows, no problems found.')).toBeVisible();
+    await page.getByRole('button', { name: 'Import 2 rows' }).click();
+    await expect(page.getByText('2 units were imported.')).toBeVisible();
+
+    // 2. residents (a Bangla name, an email and a phone number as login IDs, one resident without a unit)
+    const email = `imp${n.toLowerCase()}@example.com`;
+    const csv =
+      'full_name,login_id,phone,unit_number,type,start_date,billing_contact\r\n' +
+      `রহিম ${n},${email},01712345678,${uA},owner,2025-01-01,yes\r\n` +
+      `Karima ${n},karima${n.toLowerCase()}@example.com,01812345600,${uB},tenant,2025-02-01,\r\n` +
+      `Nounit ${n},nounit${n.toLowerCase()}@example.com,01612345601,,,,\r\n`;
+    await page.getByTestId('file-residents').setInputFiles(csvFile('residents.csv', csv));
+    await expect(page.getByText('The file is ready: 3 rows, no problems found.')).toBeVisible();
+    await page.getByRole('button', { name: 'Import 3 rows' }).click();
+    await expect(page.getByText('3 residents were imported.')).toBeVisible();
+
+    const rows = page.getByTestId('credentials').locator('tbody tr');
+    await expect(rows).toHaveCount(3);
+    const first = rows.filter({ hasText: email });
+    const temp = (await first.locator('td').nth(3).innerText()).trim();
+    expect(temp).toMatch(/^(?=.*[A-Za-z])(?=.*\d).{8,}$/);
+    await noSidewaysScroll(page);
+
+    // 3. the new resident can log in with it, and must change it
+    const ctx = await browser.newContext();
+    const resident = await ctx.newPage();
+    await login(resident, { id: email, pw: temp });
+    await expect(resident).toHaveURL(/\/change-password/);
+    await resident.getByLabel('Current password').fill(temp);
+    await resident.getByLabel('New password').fill('ImportedNew1');
+    await resident.getByRole('button', { name: 'Save' }).click();
+    await expect(resident.getByRole('heading', { name: new RegExp(`Welcome, রহিম ${n}`) })).toBeVisible();
+    await expect(resident.getByText(uA, { exact: true })).toBeVisible(); // their own unit, on their own home page
+    // ...but residents cannot use the directory or the import
+    for (const path of ['/directory', '/import']) {
+      await resident.goto(path);
+      await expect(resident.getByRole('heading', { name: 'Access denied' })).toBeVisible();
+    }
+    await ctx.close();
+
+    // 4. the directory (staff granted directory.view) shows who lives where, with tap-to-call numbers
+    const sctx = await browser.newContext();
+    const staff = await sctx.newPage();
+    await login(staff, STAFF_OFFICE);
+    await staff.goto('/directory');
+    await staff.getByPlaceholder('Search by name, unit number or phone').fill(uA);
+    const entry = staff.getByRole('listitem').filter({ hasText: `রহিম ${n}` });
+    await expect(entry).toBeVisible();
+    await expect(entry.getByText('Owner')).toBeVisible();
+    await expect(entry.getByRole('link', { name: /Call/ })).toHaveAttribute('href', 'tel:+8801712345678');
+    await staff.getByPlaceholder('Search by name, unit number or phone').fill(`karima ${n.toLowerCase()}`); // partial, any case
+    await expect(staff.getByRole('listitem').filter({ hasText: uB })).toBeVisible();
+    await staff.getByPlaceholder('Search by name, unit number or phone').fill('zzzz-nobody');
+    await expect(staff.getByText('No one matches your search.')).toBeVisible();
+    await noSidewaysScroll(staff);
+    // staff without directory.view do not see it
+    await sctx.close();
+    const nctx = await browser.newContext();
+    const none = await nctx.newPage();
+    await login(none, STAFF_NONE);
+    await none.goto('/directory');
+    await expect(none.getByRole('heading', { name: 'Access denied' })).toBeVisible();
+    await nctx.close();
+  });
+
+  test('the import and directory work in Bangla too', async ({ page }) => {
+    const me = await createAdmin();
+    await page.goto('/login');
+    await page.getByRole('button', { name: 'বাংলা' }).click();
+    await page.getByLabel('ইমেইল বা মোবাইল নম্বর').fill(me.id);
+    await page.getByLabel('পাসওয়ার্ড', { exact: true }).fill(me.pw);
+    await page.getByRole('button', { name: 'লগ ইন করুন' }).click();
+    await expect(page.getByRole('heading', { name: /স্বাগতম/ })).toBeVisible();
+    await page.goto('/import');
+    await expect(page.getByRole('heading', { name: 'স্প্রেডশিট থেকে আমদানি' })).toBeVisible();
+    await page.getByTestId('file-units').setInputFiles(csvFile('bad.csv', 'unit_number,floor\r\n,1\r\n'));
+    await expect(page.getByText('1টি সমস্যা পাওয়া গেছে।')).toBeVisible();
+    await expect(page.getByText('এই মানটি আবশ্যক।')).toBeVisible();
+    await noSidewaysScroll(page);
+    await page.goto('/directory');
+    await expect(page.getByRole('heading', { name: 'বাসিন্দা তালিকা' })).toBeVisible();
+  });
+});

@@ -357,6 +357,9 @@ Requirements are written as user stories. Each has **confirmation** criteria tha
 - I can download a CSV template for units and one for residents (including unit number, owner or tenant, and start date).
 - When I upload a filled-in CSV, the system checks every row and shows a preview before saving anything. Each error shows the line number, the field, and what is wrong.
 - I can import only when there are no errors. The import is all-or-nothing (NFR-14).
+- A units file can have up to 2,000 rows and a residents file up to 200 rows. Larger sets are split into several files.
+- A residents file can place each resident in a unit (owner or tenant, with a start date) or leave them unassigned. The first resident placed in a unit without a billing contact becomes its billing contact (BR-06), and a file cannot name a second one.
+- Units must be imported before the residents who live in them. A file cannot create staff or administrator accounts.
 - Imported residents get temporary passwords, shown once in a printable list for me to hand out (FR-31).
 - Bangla text in a UTF-8 CSV is imported correctly.
 

@@ -591,14 +591,23 @@ Every job is idempotent (unique keys, or marker columns), so a crash or double r
 ### 6.13 Bulk import (FR-42)
 
 ```
-POST /api/import/{units|residents}?dryRun=true   (multipart CSV, UTF-8, ≤ 1 MB, ≤ 2,000 rows)
-→ { valid: boolean, rows: n, errors: [{ line, field, code }] }
-POST /api/import/{units|residents}               (same file, after a clean dry run)
-→ one transaction; residents → users + occupancies + temp passwords
-→ { created: n, credentials: [{ name, loginId, tempPassword }] }   shown once, printable
+POST /api/import/{units|residents}?dryRun=true   body { csv }: UTF-8 text ≤ 700,000 characters
+                                                 ≤ 2,000 unit rows or ≤ 200 resident rows
+→ 200 { valid: boolean, rows: n, errors: [{ line, field, code }] }     (problems are a normal result of a check)
+POST /api/import/{units|residents}               (same body; the web app sends it only after a clean check)
+→ one transaction; residents → users + profiles + occupancies + one-time temporary passwords
+→ 200 { valid: true, created: n, credentials: [{ fullName, loginId, tempPassword, unitNumber }] }   shown once, printable
+→ 422 { error: IMPORT_INVALID, errors: [...] } if the file has problems (nothing is saved)
 ```
 
-Unit columns: `unit_number, floor, size_sqft, bedrooms, opening_balance`.
+How it works: phase 1 checks every row without touching the database; phase 2 checks against existing data (taken unit
+numbers and login IDs, unit exists and is available, billing contacts); phase 3 writes everything in one transaction.
+Errors carry the file line, the column, and a code the web app translates.
+
+Resident files are capped at 200 rows because each temporary password is hashed with bcrypt (about 60 ms at cost 10,
+used for these single-use random passwords; real passwords stay at cost 12, about 230 ms). 200 rows take about 12 seconds.
+
+Unit columns: `unit_number, floor, size_sqft, bedrooms` (an `opening_balance` column is added in Sprint 2 with FR-41).
 Resident columns: `full_name, login_id, phone, unit_number, type (owner|tenant), start_date (YYYY-MM-DD), billing_contact (yes|no)`.
 
 ### 6.14 Income vs expense (FR-44)
@@ -809,7 +818,7 @@ HTTP status codes: `VALIDATION_FAILED` 400, `UNAUTHENTICATED` 401, `FORBIDDEN` /
 - [ ] CSRF token on all non-GET (NFR-05)
 - [ ] Uploads: `file-type` sniff, size limits, random names, `nosniff`, `Content-Disposition` (NFR-06)
 - [ ] Chromium for PDFs: JavaScript disabled, all network requests blocked (only embedded fonts/data), so user text cannot load remote resources
-- [ ] Login rate limit + lockout (NFR-07)
+- [ ] Login rate limit + lockout (NFR-07): the per-address limiter counts only FAILED logins (a building shares one Wi-Fi address); the per-account lockout is the main defence
 - [ ] Resident queries always join `unit_access`; 404 on others' IDs; tests per endpoint (NFR-24)
 - [ ] Screenshots/receipt photos only to their owners and permitted roles (NFR-23)
 - [ ] Service worker caches no private API responses; cache cleared on logout (FR-48)

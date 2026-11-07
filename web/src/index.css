@@ -43,3 +43,19 @@ body {
 body {
   overflow-wrap: anywhere;
 }
+
+/* Printing the temporary-password list: only the list itself is printed (FR-42). */
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .no-print-section > :not(.print-area):not(h2) {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+}

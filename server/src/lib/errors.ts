@@ -45,6 +45,10 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(400).json({ error: { code: 'VALIDATION_FAILED', fields } });
     return;
   }
+  if (err?.type === 'entity.too.large') {
+    res.status(413).json({ error: { code: 'PAYLOAD_TOO_LARGE' } });
+    return;
+  }
   if (err?.type === 'entity.parse.failed') {
     res.status(400).json({ error: { code: 'VALIDATION_FAILED' } });
     return;

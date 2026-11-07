@@ -21,7 +21,7 @@ async function user(loginId: string, fullName: string, role: Role, password: str
 async function main() {
   await user('admin@demo.local', 'Demo Admin', 'ADMIN', 'Admin1234');
   await user('staff@demo.local', 'Demo Caretaker', 'STAFF', 'Staff1234'); // no extra permissions
-  await user('office@demo.local', 'Demo Office Staff', 'STAFF', 'Office1234', ['units.manage', 'residents.manage']);
+  await user('office@demo.local', 'Demo Office Staff', 'STAFF', 'Office1234', ['units.manage', 'residents.manage', 'directory.view']);
 
   const settings: Record<string, string> = {
     buildingName: 'Demo Tower',

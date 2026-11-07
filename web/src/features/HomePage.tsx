@@ -41,7 +41,9 @@ export function HomePage() {
   const shortcuts = [
     { to: '/units', label: t('nav.units'), show: can('units.manage') || can('residents.manage') },
     { to: '/residents', label: t('nav.residents'), show: can('residents.manage') },
+    { to: '/directory', label: t('nav.directory'), show: can('directory.view') },
     { to: '/staff', label: t('nav.staff'), show: user.role === 'ADMIN' },
+    { to: '/import', label: t('nav.import'), show: user.role === 'ADMIN' },
   ].filter((s) => s.show);
 
   return (
