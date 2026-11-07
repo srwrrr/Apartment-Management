@@ -78,12 +78,13 @@ describe('FR-06 staff accounts', () => {
   it('replaces permissions, and the change applies to the staff member immediately (FR-06)', async () => {
     const { c } = await loginAs(app, 'ADMIN');
     const staff = await loginAs(app, 'STAFF', ['units.manage']);
-    expect((await staff.c.get('/api/units')).status).toBe(200);
+    const newUnit = (n: string) => staff.c.post('/api/units', { unitNumber: n, floor: 1 });
+    expect((await newUnit('P1')).status).toBe(201);
     expect((await staff.c.get('/api/residents')).status).toBe(403);
 
     const res = await c.put(`/api/staff/${staff.user.id}/permissions`, { permissions: ['residents.manage'] });
     expect(res.body.permissions).toEqual(['residents.manage']);
-    expect((await staff.c.get('/api/units')).status).toBe(403);
+    expect((await newUnit('P2')).status).toBe(403); // units.manage is gone
     expect((await staff.c.get('/api/residents')).status).toBe(200);
 
     expect((await c.put(`/api/staff/${staff.user.id}/permissions`, { permissions: [] })).body.permissions).toEqual([]);

@@ -7,3 +7,5 @@ server/uploads/*
 backups/
 coverage/
 .vite/
+test-results/
+playwright-report/

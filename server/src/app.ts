@@ -11,6 +11,7 @@ import { occupanciesRouter, unitOccupanciesRouter } from './modules/users/occupa
 import { residentsRouter } from './modules/users/residents.routes';
 import { staffRouter, usersRouter } from './modules/users/staff.routes';
 import { meRouter } from './modules/users/me.routes';
+import { preferencesRouter } from './modules/users/preferences.routes';
 
 export function createApp() {
   const app = express();
@@ -30,6 +31,7 @@ export function createApp() {
   // Everything below needs a session, CSRF protection on writes, and the current user loaded.
   app.use('/api', sessionMiddleware, csrfProtection, loadUser);
   app.use('/api/auth', authRouter);
+  app.use('/api/me/preferences', preferencesRouter); // any role; must come before the resident-only /api/me
   app.use('/api/me', meRouter);
   app.use('/api/units/:unitId/occupancies', unitOccupanciesRouter); // before /api/units (different permission)
   app.use('/api/units', unitsRouter);

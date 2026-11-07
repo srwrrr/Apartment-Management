@@ -1,0 +1,123 @@
+{
+  "app": { "name": "Apartment Management", "building": "Demo Tower" },
+  "common": {
+    "save": "Save", "cancel": "Cancel", "edit": "Edit", "add": "Add", "close": "Close", "back": "Back",
+    "search": "Search", "loading": "Loading…", "actions": "Actions", "name": "Name", "phone": "Phone",
+    "status": "Status", "active": "Active", "inactive": "Inactive", "language": "Language",
+    "textSize": "Text size", "normalText": "Normal", "largeText": "Large", "logout": "Log out",
+    "changePassword": "Change password", "copy": "Copy", "copied": "Copied", "optional": "optional",
+    "noResults": "Nothing found.", "previous": "Previous", "next": "Next", "page": "Page {{page}} of {{pages}}",
+    "total": "{{count}} in total", "yes": "Yes", "no": "No", "date": "Date", "type": "Type", "menu": "Menu",
+    "retry": "Try again", "all": "All", "email": "Email", "loginId": "Login ID", "permissions": "Permissions",
+    "skipToContent": "Skip to content"
+  },
+  "nav": { "home": "Home", "units": "Units", "residents": "Residents", "staff": "Staff", "profile": "My profile" },
+  "roles": { "RESIDENT": "Resident", "STAFF": "Staff", "ADMIN": "Administrator" },
+  "auth": {
+    "loginTitle": "Log in",
+    "loginIntro": "Use your email address or mobile number.",
+    "loginId": "Email or mobile number",
+    "password": "Password",
+    "signIn": "Log in",
+    "signingIn": "Logging in…",
+    "demoNote": "Demo accounts",
+    "changeTitle": "Change your password",
+    "changeTempIntro": "You are using a temporary password. Choose your own password to continue.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "passwordHelp": "At least 8 characters, with a letter and a number.",
+    "changed": "Your password was changed.",
+    "otherSessions": "You were logged out on your other devices."
+  },
+  "home": {
+    "welcome": "Welcome, {{name}}",
+    "residentIntro": "Your apartment and contact details are below. Bills and maintenance requests are coming soon.",
+    "staffIntro": "Use the menu to manage the building.",
+    "yourUnits": "Your apartment",
+    "noUnits": "You are not linked to an apartment yet. Please contact the building office.",
+    "shortcuts": "Shortcuts"
+  },
+  "units": {
+    "title": "Apartment units", "add": "Add unit", "edit": "Edit unit", "new": "New unit", "number": "Unit number",
+    "floor": "Floor", "size": "Size (sq ft)", "bedrooms": "Bedrooms", "available": "Available for residents",
+    "searchPlaceholder": "Search by unit number", "viewOnly": "You can view units but not change them.",
+    "status": { "OCCUPIED": "Occupied", "VACANT": "Vacant", "UNAVAILABLE": "Unavailable" },
+    "occupants": "Residents", "history": "Occupancy history", "noHistory": "Nobody has lived here yet.",
+    "assign": "Add a resident to this unit", "resident": "Resident", "searchResident": "Search residents by name or phone",
+    "startDate": "Start date", "endDate": "End date", "billingContact": "Billing contact",
+    "makeBillingContact": "Make billing contact", "endStay": "End stay", "endStayTitle": "End this stay",
+    "endStayHelp": "The last day the resident lived here.", "newBillingContact": "New billing contact",
+    "autoContact": "Choose automatically", "present": "Present", "type": { "OWNER": "Owner", "TENANT": "Tenant" },
+    "unavailableNote": "This unit is marked unavailable, so no one can be added."
+  },
+  "residents": {
+    "title": "Residents", "add": "Add resident", "new": "New resident", "edit": "Edit resident", "fullName": "Full name",
+    "altPhone": "Alternative phone", "emergencyName": "Emergency contact name", "emergencyPhone": "Emergency contact phone",
+    "searchPlaceholder": "Search by name, phone or login ID", "filterActive": "Active only", "units": "Apartment",
+    "noUnit": "Not assigned", "created": "Resident created", "deactivate": "Deactivate", "reactivate": "Reactivate",
+    "deactivateTitle": "Deactivate {{name}}?", "deactivateHelp": "They will no longer be able to log in. Their records are kept.",
+    "moveOutDate": "Move-out date", "moveOutHelp": "This resident still lives in a unit. Enter the last day they lived there.",
+    "resetPassword": "Reset password", "stays": "Apartments", "details": "Details", "tempPassword": "Temporary password"
+  },
+  "temp": {
+    "title": "Give this to the user",
+    "body": "This temporary password is shown only once. The user must choose a new password when they first log in.",
+    "loginId": "Login ID", "password": "Temporary password", "done": "I have noted it"
+  },
+  "staff": {
+    "title": "Staff", "add": "Add staff member", "new": "New staff member", "editPermissions": "Edit permissions",
+    "noPermissions": "No extra permissions", "permissionsHelp": "Choose what this person may do. Administrators can do everything.",
+    "deactivate": "Deactivate", "reactivate": "Reactivate", "resetPassword": "Reset password", "empty": "No staff accounts yet."
+  },
+  "permissions": {
+    "residents.manage": "Manage residents and occupancy", "units.manage": "Manage units", "directory.view": "View resident directory",
+    "billing.manage": "Manage bills and fees", "billing.view": "View bills", "payments.record": "Record and verify payments",
+    "expenses.manage": "Manage building expenses", "reports.view": "View reports and dashboard",
+    "maintenance.view_all": "View all maintenance requests", "maintenance.review": "Review maintenance requests",
+    "maintenance.assign": "Assign maintenance requests", "announcements.manage": "Manage announcements"
+  },
+  "profile": {
+    "title": "My profile", "contact": "Contact details", "saved": "Saved", "contactHelp": "You can change your phone numbers. To change your name or login ID, ask the building office.",
+    "yourStays": "My apartments", "since": "Since {{date}}"
+  },
+  "denied": { "title": "Access denied", "body": "You do not have permission to open this page.", "home": "Go to the home page" },
+  "notFound": { "title": "Page not found", "body": "This page does not exist." },
+  "errors": {
+    "INVALID_CREDENTIALS": "Incorrect login ID or password.",
+    "LOCKED": "Too many wrong attempts. This account is locked for 15 minutes.",
+    "RATE_LIMITED": "Too many attempts. Please wait a few minutes and try again.",
+    "UNAUTHENTICATED": "Please log in again.",
+    "FORBIDDEN": "You do not have permission to do this.",
+    "NOT_FOUND": "We could not find what you asked for.",
+    "CSRF_INVALID": "Your session expired. Please try again.",
+    "VALIDATION_FAILED": "Please fix the highlighted fields.",
+    "CONFLICT": "This conflicts with existing information.",
+    "PASSWORD_CHANGE_REQUIRED": "Please change your temporary password first.",
+    "OCCUPANCY_OVERLAP": "This resident already has a stay in this unit during these dates.",
+    "BILLING_CONTACT_EXISTS": "This unit already has a billing contact. Use “Make billing contact” to change it.",
+    "UNIT_UNAVAILABLE": "This unit is marked unavailable, so no one can be added.",
+    "OCCUPANCY_ALREADY_ENDED": "This stay has already ended.",
+    "OCCUPANCY_NOT_ACTIVE": "Only a current stay can be the billing contact.",
+    "CANNOT_RESET_OWN_PASSWORD": "Use “Change password” to change your own password.",
+    "NETWORK": "Cannot reach the server. Check your internet connection and try again.",
+    "INTERNAL": "Something went wrong on our side. Please try again."
+  },
+  "fieldErrors": {
+    "INVALID": "This value is not valid.",
+    "INVALID_INVALID_TYPE": "This field is required.",
+    "INVALID_TOO_SMALL": "This value is too short or too small.",
+    "INVALID_TOO_BIG": "This value is too long or too large.",
+    "UNIT_NUMBER_TAKEN": "A unit with this number already exists.",
+    "LOGIN_ID_TAKEN": "This login ID is already used by someone else.",
+    "LOGIN_ID_INVALID": "Enter a valid email address or Bangladeshi mobile number.",
+    "PHONE_INVALID": "Enter a valid Bangladeshi mobile number, like 01712345678.",
+    "END_BEFORE_START": "The end date cannot be before the start date.",
+    "END_DATE_REQUIRED": "Enter the last day this person lived in the unit.",
+    "INVALID_DATE": "Enter a real date.",
+    "RESIDENT_NOT_FOUND": "Choose a resident from the list.",
+    "WRONG_PASSWORD": "That is not your current password.",
+    "PASSWORD_TOO_WEAK": "Use at least 8 characters, with a letter and a number.",
+    "PASSWORD_UNCHANGED": "Choose a password that is different from the current one.",
+    "NEW_BILLING_CONTACT_INVALID": "Choose someone who currently lives in this unit."
+  }
+}

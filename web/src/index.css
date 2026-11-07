@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Noto Sans', 'Noto Sans Bengali', system-ui, sans-serif;
+  /* Brand green. Text on these backgrounds is white or very dark, both above 4.5:1. */
+  --color-brand-50: #eaf6f2;
+  --color-brand-100: #cfeae2;
+  --color-brand-600: #0f6b59;
+  --color-brand-700: #0b5546;
+  --color-brand-900: #07342b;
+  --color-ink: #1a2321;
+  --color-muted: #51605b;
+  --color-line: #d5dedb;
+  --color-surface: #ffffff;
+  --color-page: #f4f7f6;
+  --color-danger-600: #b3261e;
+  --color-danger-50: #fdecea;
+  --color-warn-50: #fff4db;
+  --color-warn-700: #7a4b00;
+}
+
+html {
+  font-size: 100%;
+}
+/* All sizes are in rem, so this one rule enlarges text, buttons and spacing together (FR-55). */
+html.text-large {
+  font-size: 125%;
+}
+
+body {
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+}
+
+:focus-visible {
+  outline: 3px solid #1d6fd8;
+  outline-offset: 2px;
+}
+
+/* Keep long Bangla/English words and IDs from forcing sideways scrolling on phones (NFR-10). */
+body {
+  overflow-wrap: anywhere;
+}

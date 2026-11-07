@@ -56,6 +56,15 @@ export const requirePermission =
     next();
   };
 
+/** Admin, or staff holding at least one of these permissions. Use after requireAuth. */
+export const requireAnyPermission =
+  (...permissions: Permission[]): RequestHandler =>
+  (req, _res, next) => {
+    if (!req.user) return next(new ApiError(401, 'UNAUTHENTICATED'));
+    if (!permissions.some((p) => hasPermission(req.user!, p))) return next(forbidden());
+    next();
+  };
+
 /** Only users with this exact role (e.g. residents' own pages). Use after requireAuth. */
 export const requireRole =
   (role: 'RESIDENT' | 'STAFF' | 'ADMIN'): RequestHandler =>

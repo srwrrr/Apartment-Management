@@ -51,8 +51,19 @@ describe('NFR-02 / FR-02 role-based access on /api/units', () => {
   });
 
   it('a different permission does not open units', async () => {
-    const { c } = await as('STAFF', ['billing.view', 'residents.manage']);
+    const { c } = await as('STAFF', ['billing.view', 'payments.record']);
     expect((await c.get('/api/units')).status).toBe(403);
+  });
+});
+
+describe('residents.manage may look units up but not change them', () => {
+  it('can list and view, cannot create or edit', async () => {
+    const { c } = await as('STAFF', ['residents.manage']);
+    const unit = await makeUnit('8A', 8);
+    expect((await c.get('/api/units')).status).toBe(200);
+    expect((await c.get(`/api/units/${unit.id}`)).status).toBe(200);
+    expect((await c.post('/api/units', { unitNumber: 'X1', floor: 1 })).status).toBe(403);
+    expect((await c.patch(`/api/units/${unit.id}`, { floor: 2 })).status).toBe(403);
   });
 });
 

@@ -26,9 +26,9 @@ describe('FR-05 access', () => {
     expect((await (await loginAs(app, 'STAFF', ['residents.manage'])).c.get(`/api/units/${unit.id}/occupancies`)).status).toBe(200);
   });
 
-  it('the units endpoints still need units.manage (route order does not leak access)', async () => {
+  it('residents.manage does not unlock changing units (route order does not leak access)', async () => {
     const staff = await loginAs(app, 'STAFF', ['residents.manage']);
-    expect((await staff.c.get('/api/units')).status).toBe(403);
+    expect((await staff.c.post('/api/units', { unitNumber: 'Q1', floor: 1 })).status).toBe(403);
   });
 });
 

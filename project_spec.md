@@ -157,6 +157,8 @@ maintenance.view_all  maintenance.review     maintenance.assign
 announcements.manage
 ```
 
+**Reading units** (list and detail) is allowed with `units.manage` *or* `residents.manage`, because assigning residents needs a unit lookup; **changing** units needs `units.manage`.
+
 **Admin-only, never grantable:** manage staff, void payments, opening balances, bulk import, issue no-dues certificates, activity log, settings, password resets.
 
 ### 4.1 Enforcement
@@ -894,8 +896,8 @@ DEMO_MODE=true
 
 **Other commands**
 ```
-npm test             # unit + API
-npm run test:e2e     # Playwright
+npm test             # shared + server (API, against apartment_test) + web unit tests
+npm run test:e2e     # Playwright, desktop + phone; own database apartment_e2e on ports 4100/5174
 npm run build && npm start   # production build; Express serves web/dist
 ```
 
