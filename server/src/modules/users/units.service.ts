@@ -21,7 +21,7 @@ function withStatus(unit: Unit, activeOccupancies: number) {
   return { ...unit, status, activeOccupancies };
 }
 
-const activeOccupancyWhere = (): Prisma.OccupancyWhereInput => {
+export const activeOccupancyWhere = (): Prisma.OccupancyWhereInput => {
   const today = dateOnly(todayDhaka());
   return { startDate: { lte: today }, OR: [{ endDate: null }, { endDate: { gte: today } }] };
 };

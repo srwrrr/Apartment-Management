@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import type { User } from '@prisma/client';
+import type { Prisma, PrismaClient, User } from '@prisma/client';
 import { normalizeLoginId, passwordSchema } from '@apt/shared';
 import { BCRYPT_COST } from '../../config';
 import { prisma } from '../../lib/prisma';
@@ -48,6 +48,11 @@ export async function verifyLogin(loginIdInput: string, password: string): Promi
     await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null } });
   }
   return user;
+}
+
+/** Ends every session of a user (deactivation, password reset). Works inside a transaction too. */
+export function endAllSessions(db: PrismaClient | Prisma.TransactionClient, userId: string) {
+  return db.$executeRaw`DELETE FROM "session" WHERE "userId" = ${userId}::uuid`;
 }
 
 /** FR-31: change own password. Ends the user's other sessions. */

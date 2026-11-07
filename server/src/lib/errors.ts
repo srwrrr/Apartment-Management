@@ -15,6 +15,13 @@ export class ApiError extends Error {
 export const notFound = () => new ApiError(404, 'NOT_FOUND');
 export const forbidden = () => new ApiError(403, 'FORBIDDEN');
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** A malformed ID can never match a record, so it is a plain 404, not a server error. */
+export function assertUuid(id: string): string {
+  if (!UUID.test(id)) throw notFound();
+  return id;
+}
+
 /** Express 4 does not catch rejected promises; wrap async handlers with this. */
 export const asyncHandler =
   (fn: (...args: Parameters<RequestHandler>) => Promise<unknown>): RequestHandler =>
@@ -30,7 +37,10 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof ZodError) {
     const fields: Record<string, { code: string }> = {};
     for (const issue of err.issues) {
-      fields[issue.path.join('.') || '_'] = { code: `INVALID_${issue.code.toUpperCase()}` };
+      // Custom refinements carry their own machine code in the message (e.g. LOGIN_ID_INVALID).
+      fields[issue.path.join('.') || '_'] = {
+        code: issue.code === 'custom' ? issue.message : `INVALID_${issue.code.toUpperCase()}`,
+      };
     }
     res.status(400).json({ error: { code: 'VALIDATION_FAILED', fields } });
     return;

@@ -56,6 +56,15 @@ export const requirePermission =
     next();
   };
 
+/** Only users with this exact role (e.g. residents' own pages). Use after requireAuth. */
+export const requireRole =
+  (role: 'RESIDENT' | 'STAFF' | 'ADMIN'): RequestHandler =>
+  (req, _res, next) => {
+    if (!req.user) return next(new ApiError(401, 'UNAUTHENTICATED'));
+    if (req.user.role !== role) return next(forbidden());
+    next();
+  };
+
 export const requireAdmin: RequestHandler = (req, _res, next) => {
   if (!req.user) return next(new ApiError(401, 'UNAUTHENTICATED'));
   if (req.user.role !== 'ADMIN') return next(forbidden());

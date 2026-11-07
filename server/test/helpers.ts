@@ -57,6 +57,7 @@ export async function client(app: Express) {
     get: (url: string) => agent.get(url),
     post: (url: string, body: object = {}) => agent.post(url).set('X-CSRF-Token', token).send(body),
     patch: (url: string, body: object = {}) => agent.patch(url).set('X-CSRF-Token', token).send(body),
+    put: (url: string, body: object = {}) => agent.put(url).set('X-CSRF-Token', token).send(body),
     async login(loginId: string, password = PASSWORD) {
       const res = await c.post('/api/auth/login', { loginId, password });
       if (res.status === 200) token = res.body.csrfToken;
@@ -64,4 +65,13 @@ export async function client(app: Express) {
     },
   };
   return c;
+}
+
+/** Log in as a fresh user of the given role. */
+export async function loginAs(app: Express, role: Role, permissions: string[] = [], over = {}) {
+  const user = await makeLoginUser(role, permissions, over);
+  const c = await client(app);
+  const res = await c.login(user.loginId);
+  if (res.status !== 200) throw new Error('test login failed: ' + res.status);
+  return { c, user };
 }

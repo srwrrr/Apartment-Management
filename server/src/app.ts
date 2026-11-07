@@ -7,6 +7,10 @@ import { csrfProtection } from './middleware/csrf';
 import { loadUser } from './middleware/auth';
 import { authRouter } from './modules/users/auth.routes';
 import { unitsRouter } from './modules/users/units.routes';
+import { occupanciesRouter, unitOccupanciesRouter } from './modules/users/occupancies.routes';
+import { residentsRouter } from './modules/users/residents.routes';
+import { staffRouter, usersRouter } from './modules/users/staff.routes';
+import { meRouter } from './modules/users/me.routes';
 
 export function createApp() {
   const app = express();
@@ -26,7 +30,13 @@ export function createApp() {
   // Everything below needs a session, CSRF protection on writes, and the current user loaded.
   app.use('/api', sessionMiddleware, csrfProtection, loadUser);
   app.use('/api/auth', authRouter);
+  app.use('/api/me', meRouter);
+  app.use('/api/units/:unitId/occupancies', unitOccupanciesRouter); // before /api/units (different permission)
   app.use('/api/units', unitsRouter);
+  app.use('/api/occupancies', occupanciesRouter);
+  app.use('/api/residents', residentsRouter);
+  app.use('/api/staff', staffRouter);
+  app.use('/api/users', usersRouter);
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: { code: 'NOT_FOUND' } });
