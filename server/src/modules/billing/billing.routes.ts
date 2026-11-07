@@ -1,4 +1,5 @@
-import { Router, type RequestHandler } from 'express';
+import { Router, type RequestHandler, type Response } from 'express';
+import multer from 'multer';
 import {
   billListQuerySchema,
   chargeInputSchema,
@@ -10,6 +11,16 @@ import {
   paymentInputSchema,
   voidPaymentSchema,
   BILL_READ_PERMISSIONS,
+  MAX_PHOTO_BYTES,
+  buildingSummaryQuerySchema,
+  certificateIssueSchema,
+  certificateLookupSchema,
+  myStatementQuerySchema,
+  paymentReportCreateSchema,
+  paymentReportListQuerySchema,
+  paymentReportRejectSchema,
+  paymentReportVerifySchema,
+  statementQuerySchema,
 } from '@apt/shared';
 import { prisma } from '../../lib/prisma';
 import { asyncHandler, assertUuid, forbidden, notFound } from '../../lib/errors';
@@ -32,10 +43,28 @@ import {
 import { getFees, getUnitFees, setDefaultFees, setUnitFees } from './fees.service';
 import { getReceiptData, recordPayment, voidPayment } from './payments.service';
 import { receiptHtml } from './receipt';
+import { createReport, listBillReports, listReports, rejectReport, verifyReport } from './paymentReports.service';
+import { getStatement, myStatementUnits, statementHtml, type Statement } from './statement.service';
+import { certificateHtml, getCertificateFor, issueCertificate, listMyCertificates, listUnitCertificates, lookupCertificate } from './certificates.service';
+import { buildingSummary } from '../expenses/expenses.service';
 
 const param = (v: unknown) => String(v);
 const canSeeAllBills = requireAnyPermission(...BILL_READ_PERMISSIONS);
 const canEditBills = requirePermission('billing.manage');
+// One screenshot, held in memory so its real content can be checked before anything is written (BR-21, NFR-06).
+const screenshot = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PHOTO_BYTES, files: 1, fields: 10 } }).single('screenshot');
+
+function sendPdf(res: Response, pdf: Buffer, filename: string) {
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${filename}.pdf"`);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.send(pdf);
+}
+
+async function sendStatement(res: Response, s: Statement, language: 'EN' | 'BN') {
+  const { buildingName } = await getSettings();
+  sendPdf(res, await renderPdf(statementHtml(s, buildingName, language)), `statement-${s.unit.unitNumber}-${s.from}-${s.to}`);
+}
 
 // ---------------------------------------------------------------- fees (FR-32)
 export const feesRouter = Router();
@@ -58,6 +87,32 @@ unitBillingRouter.post(
   '/opening-balance',
   requireAdmin,
   asyncHandler(async (req, res) => res.status(201).json(await createOpeningBalance(param(req.params.unitId), openingBalanceSchema.parse(req.body), req.user!))),
+);
+
+// FR-45: any unit's statement, for those who work with bills.
+unitBillingRouter.get(
+  '/statement',
+  canSeeAllBills,
+  asyncHandler(async (req, res) => {
+    const { from, to } = statementQuerySchema.parse(req.query);
+    res.json(await getStatement(param(req.params.unitId), from, to));
+  }),
+);
+unitBillingRouter.get(
+  '/statement.pdf',
+  canSeeAllBills,
+  asyncHandler(async (req, res) => {
+    const { from, to } = statementQuerySchema.parse(req.query);
+    await sendStatement(res, await getStatement(param(req.params.unitId), from, to), req.user!.language);
+  }),
+);
+
+// FR-46: issuing is for administrators only (never grantable); billing.view may look.
+unitBillingRouter.get('/certificates', requirePermission('billing.view'), asyncHandler(async (req, res) => res.json(await listUnitCertificates(param(req.params.unitId)))));
+unitBillingRouter.post(
+  '/certificates',
+  requireAdmin,
+  asyncHandler(async (req, res) => res.status(201).json(await issueCertificate(param(req.params.unitId), certificateIssueSchema.parse(req.body).residentId, req.user!))),
 );
 
 // ---------------------------------------------------------------------- bills
@@ -94,6 +149,14 @@ billsRouter.post(
   requirePermission('payments.record'),
   asyncHandler(async (req, res) => res.status(201).json(await recordPayment(param(req.params.id), paymentInputSchema.parse(req.body), req.user!))),
 );
+// FR-39: "I've paid". Residents and household members, on a bill they can see.
+billsRouter.post(
+  '/:id/payment-reports',
+  requireRole('RESIDENT'),
+  screenshot,
+  asyncHandler(async (req, res) => res.status(201).json(await createReport(param(req.params.id), paymentReportCreateSchema.parse(req.body), req.file, req.user!))),
+);
+billsRouter.get('/:id/payment-reports', asyncHandler(async (req, res) => res.json(await listBillReports(param(req.params.id), req.user!))));
 billsRouter.delete(
   '/:id',
   requireAdmin,
@@ -108,6 +171,29 @@ export const chargesRouter = Router();
 chargesRouter.use(requireAuth, canEditBills);
 chargesRouter.patch('/:id', asyncHandler(async (req, res) => res.json(await updateCharge(param(req.params.id), chargeUpdateSchema.parse(req.body), req.user!))));
 chargesRouter.delete('/:id', asyncHandler(async (req, res) => res.json(await deleteCharge(param(req.params.id), req.user!))));
+
+// ------------------------------------------------------------ payment reports
+// FR-40: the verification queue.
+export const paymentReportsRouter = Router();
+paymentReportsRouter.use(requireAuth, requirePermission('payments.record'));
+paymentReportsRouter.get('/', asyncHandler(async (req, res) => res.json(await listReports(paymentReportListQuerySchema.parse(req.query)))));
+paymentReportsRouter.post('/:id/verify', asyncHandler(async (req, res) => res.json(await verifyReport(param(req.params.id), paymentReportVerifySchema.parse(req.body), req.user!))));
+paymentReportsRouter.post('/:id/reject', asyncHandler(async (req, res) => res.json(await rejectReport(param(req.params.id), paymentReportRejectSchema.parse(req.body), req.user!))));
+
+// --------------------------------------------------------------- certificates
+export const certificatesRouter = Router();
+certificatesRouter.use(requireAuth);
+// FR-46: an administrator confirms that a number is genuine.
+certificatesRouter.get('/', requireAdmin, asyncHandler(async (req, res) => res.json(await lookupCertificate(certificateLookupSchema.parse(req.query).number))));
+certificatesRouter.get(
+  '/:id/pdf',
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const c = await getCertificateFor(param(req.params.id), user);
+    const { buildingName } = await getSettings();
+    sendPdf(res, await renderPdf(certificateHtml(c, buildingName, user.language)), c.number);
+  }),
+);
 
 // ------------------------------------------------------------------- payments
 export const paymentsRouter = Router();
@@ -135,6 +221,26 @@ export const meBillingRouter = Router();
 meBillingRouter.use(requireAuth, requireRole('RESIDENT'));
 meBillingRouter.get('/bills', asyncHandler(async (req, res) => res.json(await listBills(billListQuerySchema.parse(req.query), req.user!.id))));
 meBillingRouter.get('/balance', asyncHandler(async (req, res) => res.json(await myBalance(req.user!.id))));
+
+// FR-45: only what this resident may see (BR-08).
+meBillingRouter.get('/statement/units', asyncHandler(async (req, res) => res.json({ items: await myStatementUnits(req.user!.id) })));
+meBillingRouter.get(
+  '/statement',
+  asyncHandler(async (req, res) => {
+    const { unitId, from, to } = myStatementQuerySchema.parse(req.query);
+    res.json(await getStatement(unitId, from, to, req.user!.id));
+  }),
+);
+meBillingRouter.get(
+  '/statement.pdf',
+  asyncHandler(async (req, res) => {
+    const { unitId, from, to } = myStatementQuerySchema.parse(req.query);
+    await sendStatement(res, await getStatement(unitId, from, to, req.user!.id), req.user!.language);
+  }),
+);
+meBillingRouter.get('/certificates', asyncHandler(async (req, res) => res.json(await listMyCertificates(req.user!.id))));
+// FR-44: only when the administrator shares it.
+meBillingRouter.get('/building-summary', asyncHandler(async (req, res) => res.json(await buildingSummary(buildingSummaryQuerySchema.parse(req.query).month))));
 
 /** Every payment on the bills this resident may see, newest first (FR-13). */
 meBillingRouter.get(

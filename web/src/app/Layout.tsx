@@ -16,7 +16,7 @@ export function Layout() {
   const unread = useUnreadCount().data ?? 0;
   const [open, setOpen] = useState(false);
   // The building's name is a setting the administrator can change (shown for everyone who is logged in).
-  const building = useQuery({ queryKey: ['public-settings'], queryFn: () => api.get<{ buildingName: string }>('/api/settings/public'), staleTime: 5 * 60_000 });
+  const building = useQuery({ queryKey: ['public-settings'], queryFn: () => api.get<{ buildingName: string; shareExpenseSummary: boolean }>('/api/settings/public'), staleTime: 5 * 60_000 });
 
   // The same page shows each person what is theirs to deal with.
   const seesAllRequests = user?.role === 'ADMIN' || ['maintenance.view_all', 'maintenance.review', 'maintenance.assign'].some((p) => can(p as 'maintenance.review'));
@@ -28,9 +28,13 @@ export function Layout() {
     { to: '/units', label: t('nav.units'), show: can('units.manage') || can('residents.manage') },
     { to: '/residents', label: t('nav.residents'), show: can('residents.manage') },
     { to: '/bills', label: t('nav.bills'), show: user?.role === 'RESIDENT' || BILL_READ_PERMISSIONS.some((p) => can(p)) },
+    { to: '/statement', label: t('nav.statement'), show: user?.role === 'RESIDENT' },
+    { to: '/payment-reports', label: t('nav.paymentReports'), show: can('payments.record') },
     { to: '/requests', label: requestsLabel, show: true },
     { to: '/announcements', label: t('nav.announcements'), show: true },
     { to: '/reports', label: t('nav.reports'), show: can('reports.view') },
+    { to: '/expenses', label: t('nav.expenses'), show: can('expenses.manage') },
+    { to: '/building-summary', label: t('nav.buildingSummary'), show: user?.role === 'RESIDENT' && !!building.data?.shareExpenseSummary },
     { to: '/fees', label: t('nav.fees'), show: can('billing.manage') },
     { to: '/directory', label: t('nav.directory'), show: can('directory.view') },
     { to: '/staff', label: t('nav.staff'), show: user?.role === 'ADMIN' },

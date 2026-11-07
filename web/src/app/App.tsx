@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { AnnouncementDetailPage, AnnouncementsPage, NewAnnouncementPage } from '../features/AnnouncementsPage';
 import { NotificationsPage } from '../features/NotificationsPage';
 import { ReportsPage } from '../features/ReportsPage';
+import { PaymentReportsPage } from '../features/PaymentReportsPage';
+import { MyStatementPage, UnitStatementPage } from '../features/StatementPage';
+import { MoveOutPage } from '../features/MoveOutPage';
+import { BuildingSummaryPage, ExpensesPage } from '../features/ExpensesPage';
 import { BillDetailPage } from '../features/BillDetailPage';
 import { BillsPage } from '../features/BillsPage';
 import { ChangePasswordPage } from '../features/ChangePasswordPage';
@@ -71,6 +75,12 @@ export function App() {
         <Route path="requests" element={<RequestsPage />} />
         <Route path="requests/new" element={<RequireAccess role="RESIDENT"><NewRequestPage /></RequireAccess>} />
         <Route path="requests/:id" element={<RequestDetailPage />} />
+        <Route path="payment-reports" element={<RequireAccess anyOf={['payments.record']}><PaymentReportsPage /></RequireAccess>} />
+        <Route path="statement" element={<RequireAccess role="RESIDENT"><MyStatementPage /></RequireAccess>} />
+        <Route path="units/:id/statement" element={<RequireAccess anyOf={BILL_READ_PERMISSIONS}><UnitStatementPage /></RequireAccess>} />
+        <Route path="occupancies/:id/move-out" element={<RequireAccess role="ADMIN"><MoveOutPage /></RequireAccess>} />
+        <Route path="expenses" element={<RequireAccess anyOf={['expenses.manage']}><ExpensesPage /></RequireAccess>} />
+        <Route path="building-summary" element={<RequireAccess role="RESIDENT"><BuildingSummaryPage /></RequireAccess>} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="announcements" element={<AnnouncementsPage />} />
         <Route path="announcements/new" element={<RequireAccess anyOf={['announcements.manage']}><NewAnnouncementPage /></RequireAccess>} />

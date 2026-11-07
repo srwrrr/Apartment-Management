@@ -101,14 +101,16 @@ export async function dashboard(month: string = currentMonthDhaka()) {
   const [b] = await prisma.$queryRaw<{ total: number; occupied: number; unavailable: number; residents: number }[]>`
     SELECT (SELECT COUNT(*)::int FROM "units") AS total,
            (SELECT COUNT(*)::int FROM "units" un WHERE EXISTS (
-              SELECT 1 FROM "occupancies" o WHERE o."unitId" = un.id AND o."startDate" <= ${today}::date AND (o."endDate" IS NULL OR o."endDate" >= ${today}::date))) AS occupied,
+              SELECT 1 FROM "occupancies" o WHERE o."unitId" = un.id AND o."startDate" <= ${today}::date AND (o."endDate" IS NULL OR o."endDate" > ${today}::date))) AS occupied,
            (SELECT COUNT(*)::int FROM "units" un WHERE NOT un."isAvailable" AND NOT EXISTS (
-              SELECT 1 FROM "occupancies" o WHERE o."unitId" = un.id AND o."startDate" <= ${today}::date AND (o."endDate" IS NULL OR o."endDate" >= ${today}::date))) AS unavailable,
+              SELECT 1 FROM "occupancies" o WHERE o."unitId" = un.id AND o."startDate" <= ${today}::date AND (o."endDate" IS NULL OR o."endDate" > ${today}::date))) AS unavailable,
            (SELECT COUNT(*)::int FROM "users" WHERE role = 'RESIDENT' AND "isActive") AS residents`;
 
   const [thisMonth, trend] = await Promise.all([financeReport(month, month), financeReport(addMonths(month, -5), month)]);
   const [overdue] = await prisma.$queryRaw<{ n: number; amount: bigint }[]>`
     SELECT COUNT(*)::int AS n, COALESCE(SUM(balance), 0)::bigint AS amount FROM bill_summary WHERE status = 'OVERDUE'`;
+
+  const pendingReports = await prisma.paymentReport.count({ where: { status: 'PENDING' } });
 
   const grouped = await prisma.maintenanceRequest.groupBy({ by: ['status'], _count: { _all: true } });
   const by = Object.fromEntries(grouped.map((g) => [g.status, g._count._all])) as Record<string, number>;
@@ -141,6 +143,7 @@ export async function dashboard(month: string = currentMonthDhaka()) {
       openingBalances: thisMonth.openingBalances,
       overdueBills: overdue!.n,
       overdueAmount: num(overdue!.amount),
+      pendingReports,
     },
     maintenance: {
       pending: (by.SUBMITTED ?? 0) + (by.UNDER_REVIEW ?? 0),

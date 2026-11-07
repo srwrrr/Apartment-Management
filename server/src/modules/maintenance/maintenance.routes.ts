@@ -10,6 +10,7 @@ import {
   requestPrioritySchema,
   requestTransitionSchema,
 } from '@apt/shared';
+import { hasPermission } from '@apt/shared';
 import { prisma } from '../../lib/prisma';
 import { readStored } from '../../lib/files';
 import { asyncHandler, assertUuid, notFound } from '../../lib/errors';
@@ -27,6 +28,7 @@ import {
   setPriority,
   transition,
 } from './requests.service';
+import { canReadAllBills, residentCanSeeBill } from '../billing/access';
 
 // Photos arrive in memory so each one can be checked by its real content before anything is written (BR-19, NFR-06).
 const photos = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PHOTO_BYTES, files: MAX_PHOTOS, fields: 12 } }).array('photos', MAX_PHOTOS);
@@ -88,11 +90,23 @@ attachmentsRouter.get(
   asyncHandler(async (req, res) => {
     const id = param(req.params.id);
     assertUuid(id);
-    const att = await prisma.attachment.findUnique({ where: { id }, include: { requestUpdate: { select: { requestId: true, isInternal: true } } } });
+    const att = await prisma.attachment.findUnique({
+      where: { id },
+      include: { requestUpdate: { select: { requestId: true, isInternal: true } }, paymentReport: { select: { billId: true } } },
+    });
     if (!att) throw notFound();
-    const requestId = att.requestId ?? att.requestUpdate!.requestId;
-    const { audience } = await requireRequestAccess(requestId, req.user!);
-    if (audience === 'resident' && att.requestUpdate?.isInternal) throw notFound();
+    const user = req.user!;
+    if (att.paymentReport) {
+      // A payment screenshot: whoever may see the bill (BR-08, BR-21).
+      if (!canReadAllBills(user) && !(await residentCanSeeBill(user.id, att.paymentReport.billId))) throw notFound();
+    } else if (att.expenseId) {
+      // A receipt photo is never shown to residents, even when the summary is shared (FR-44).
+      if (!hasPermission(user, 'expenses.manage')) throw notFound();
+    } else {
+      const requestId = att.requestId ?? att.requestUpdate!.requestId;
+      const { audience } = await requireRequestAccess(requestId, user);
+      if (audience === 'resident' && att.requestUpdate?.isInternal) throw notFound();
+    }
     let bytes: Buffer;
     try {
       bytes = await readStored(att.storedName);

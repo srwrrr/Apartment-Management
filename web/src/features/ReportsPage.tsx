@@ -1,13 +1,14 @@
-import { useSearchParams } from 'react-router-dom';
-import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useState, type FormEvent } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { formatBDT } from '@apt/shared';
+import { useAuth } from '../app/auth';
 import { Button, Card, Field, Notice, PageHeader, Spinner, TextInput } from '../components/ui';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { errorMessage, fieldErrorsOf } from '../lib/errors';
 import { formatDate, monthLabel, thisMonth } from '../lib/format';
-import type { DuesReport, FinanceReport } from '../lib/types';
+import type { Certificate, DuesReport, FinanceReport, IncomeExpenseReport } from '../lib/types';
 
 const pct = (rate: number | null) => (rate === null ? '—' : `${rate}%`);
 
@@ -17,9 +18,8 @@ function addMonthsYm(ym: string, n: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-function Finance() {
-  const { t } = useTranslation();
-  // The period lives in the address, so a report can be bookmarked or reloaded (FR-30 style filters).
+/** The period lives in the address, so a report can be bookmarked or reloaded. */
+function usePeriod() {
   const [params, setParams] = useSearchParams();
   const to = params.get('to') ?? thisMonth();
   const from = params.get('from') ?? addMonthsYm(to, -5);
@@ -30,6 +30,12 @@ function Finance() {
     next.set('to', k === 'to' ? v : to);
     setParams(next, { replace: true });
   };
+  return { from, to, set };
+}
+
+function Finance() {
+  const { t } = useTranslation();
+  const { from, to, set } = usePeriod();
   const q = useQuery({ queryKey: ['finance-report', from, to], queryFn: () => api.get<FinanceReport>(`/api/reports/finance?from=${from}&to=${to}`), retry: false });
   const fe = fieldErrorsOf(t, q.error);
 
@@ -179,8 +185,101 @@ function Dues() {
   );
 }
 
+/** FR-44: money actually received against money actually spent, for the same period as the report above. */
+function IncomeExpense() {
+  const { t } = useTranslation();
+  const { from, to } = usePeriod();
+  const q = useQuery({ queryKey: ['income-expense', from, to], queryFn: () => api.get<IncomeExpenseReport>(`/api/reports/income-expense?from=${from}&to=${to}`), retry: false });
+  if (!q.data) return null;
+  const r = q.data;
+  return (
+    <Card className="mt-4">
+      <h2 className="mb-1 text-xl font-bold">{t('incomeExpense.title')}</h2>
+      <p className="mb-3 text-sm text-muted">{t('incomeExpense.help')}</p>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[28rem]" data-testid="income-expense">
+          <thead>
+            <tr className="border-b border-line text-sm text-muted">
+              <th className="py-2 text-start">{t('reports.month')}</th>
+              <th className="py-2 text-end">{t('incomeExpense.income')}</th>
+              <th className="py-2 text-end">{t('incomeExpense.expenses')}</th>
+              <th className="py-2 text-end">{t('incomeExpense.net')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {r.months.map((m) => (
+              <tr key={m.month} className="border-b border-line">
+                <td className="py-2">{monthLabel(m.month)}</td>
+                <td className="py-2 text-end">{formatBDT(m.income)}</td>
+                <td className="py-2 text-end">{formatBDT(m.expenses)}</td>
+                <td className="py-2 text-end">{formatBDT(m.net)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="font-bold">
+              <td className="py-2">{t('reports.total')}</td>
+              <td className="py-2 text-end" data-testid="ie-income">{formatBDT(r.income)}</td>
+              <td className="py-2 text-end" data-testid="ie-expenses">{formatBDT(r.expenses)}</td>
+              <td className="py-2 text-end" data-testid="ie-net">{formatBDT(r.net)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {r.byCategory.length > 0 && (
+        <div className="mt-4 max-w-md">
+          <h3 className="font-semibold">{t('incomeExpense.byCategory')}</h3>
+          <ul>
+            {r.byCategory.map((c) => (
+              <li key={c.category} className="flex justify-between border-b border-line py-1">
+                <span>{t(`expenses.categories.${c.category}`)}</span>
+                <span>{formatBDT(c.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/** FR-46: someone shows a certificate; is it genuine? */
+function CertificateCheck() {
+  const { t } = useTranslation();
+  const [number, setNumber] = useState('');
+  const check = useMutation({ mutationFn: () => api.get<Certificate>(`/api/certificates?number=${encodeURIComponent(number.trim())}`) });
+  const missing = check.error instanceof ApiError && check.error.status === 404;
+  return (
+    <Card className="no-print mt-4">
+      <h2 className="mb-3 text-xl font-bold">{t('certificate.lookup')}</h2>
+      <form
+        className="flex flex-wrap items-end gap-3"
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          check.mutate();
+        }}
+      >
+        <div className="min-w-56">
+          <Field label={t('certificate.lookupNumber')}>{(p) => <TextInput {...p} value={number} onChange={(e) => setNumber(e.target.value)} />}</Field>
+        </div>
+        <Button type="submit" variant="secondary" disabled={check.isPending || !number.trim()}>
+          {t('certificate.lookupButton')}
+        </Button>
+      </form>
+      {check.data && (
+        <p className="mt-3 font-semibold" data-testid="certificate-result">
+          {t('certificate.genuine', { number: check.data.number, unit: check.data.unit.unitNumber, name: check.data.issuedTo.fullName, date: formatDate(check.data.issuedAt) })}
+        </p>
+      )}
+      {missing && <p className="mt-3 font-semibold text-danger-600">{t('certificate.notFound')}</p>}
+      {check.isError && !missing && <div className="mt-3"><Notice>{errorMessage(t, check.error)}</Notice></div>}
+    </Card>
+  );
+}
+
 export function ReportsPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   return (
     <>
       <PageHeader title={t('reports.title')}>
@@ -190,6 +289,8 @@ export function ReportsPage() {
       </PageHeader>
       <Finance />
       <Dues />
+      <IncomeExpense />
+      {user?.role === 'ADMIN' && <CertificateCheck />}
     </>
   );
 }

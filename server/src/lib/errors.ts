@@ -48,7 +48,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   // Upload limits from multer (BR-19): a clear message instead of a server error.
   if (err?.name === 'MulterError') {
     const code = err.code === 'LIMIT_FILE_SIZE' ? 'FILE_TOO_LARGE' : 'TOO_MANY_FILES';
-    res.status(400).json({ error: { code: 'VALIDATION_FAILED', fields: { photos: { code } } } });
+    res.status(400).json({ error: { code: 'VALIDATION_FAILED', fields: { [err.field ?? 'photos']: { code } } } });
     return;
   }
   if (err?.type === 'entity.too.large') {

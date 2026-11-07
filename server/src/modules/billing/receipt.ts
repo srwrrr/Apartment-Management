@@ -4,17 +4,17 @@ import bn from '@apt/shared/src/locales/bn.json';
 import { fontCss } from '../../pdf/fonts';
 import type { ReceiptData } from './payments.service';
 
-type Lang = 'EN' | 'BN';
-const strings = { EN: en, BN: bn };
+export type Lang = 'EN' | 'BN';
+export const strings = { EN: en, BN: bn };
 
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 /** "November 2026" in the reader's language, with Western digits everywhere (BR-28). */
-function monthLabel(ym: string, lang: Lang): string {
+export function monthLabel(ym: string, lang: Lang): string {
   const date = new Date(`${ym}-01T00:00:00Z`);
   return new Intl.DateTimeFormat(lang === 'BN' ? 'bn-BD-u-nu-latn' : 'en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date);
 }
-function dateLabel(ymd: string, lang: Lang): string {
+export function dateLabel(ymd: string, lang: Lang): string {
   return new Intl.DateTimeFormat(lang === 'BN' ? 'bn-BD-u-nu-latn' : 'en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${ymd}T00:00:00Z`));
 }
 

@@ -406,9 +406,9 @@ describe('settings', () => {
     expect((await (await loginAs(app, 'STAFF', ['billing.manage', 'reports.view'])).c.put('/api/settings', { defaultDueDay: 5 })).status).toBe(403);
 
     const { c } = await loginAs(app, 'ADMIN');
-    expect((await c.get('/api/settings')).body).toEqual({ buildingName: 'My Building', goLiveDate: TODAY, defaultDueDay: 10 });
+    expect((await c.get('/api/settings')).body).toEqual({ buildingName: 'My Building', goLiveDate: TODAY, defaultDueDay: 10, shareExpenseSummary: false });
     const res = await c.put('/api/settings', { buildingName: 'Sunrise Tower', defaultDueDay: 15 });
-    expect(res.body).toEqual({ buildingName: 'Sunrise Tower', goLiveDate: TODAY, defaultDueDay: 15 });
+    expect(res.body).toEqual({ buildingName: 'Sunrise Tower', goLiveDate: TODAY, defaultDueDay: 15, shareExpenseSummary: false });
     expect((await c.get('/api/settings')).body.buildingName).toBe('Sunrise Tower');
   });
 
@@ -425,7 +425,7 @@ describe('settings', () => {
     await prisma.setting.create({ data: { key: 'buildingName', value: 'Sunrise Tower' } });
     expect((await (await client(app)).get('/api/settings/public')).status).toBe(401);
     for (const role of ['RESIDENT', 'STAFF', 'ADMIN'] as const) {
-      expect((await (await loginAs(app, role)).c.get('/api/settings/public')).body).toEqual({ buildingName: 'Sunrise Tower' });
+      expect((await (await loginAs(app, role)).c.get('/api/settings/public')).body).toEqual({ buildingName: 'Sunrise Tower', shareExpenseSummary: false });
     }
     const temp = await loginAs(app, 'RESIDENT', [], { mustChangePassword: true });
     expect((await temp.c.get('/api/settings/public')).status).toBe(200);

@@ -478,7 +478,8 @@ export async function deleteOpeningBalance(billId: string) {
     const { kind } = await lockBill(tx, billId);
     if (kind !== 'OPENING_BALANCE') throw new ApiError(409, 'NOT_AN_OPENING_BALANCE');
     const payments = await tx.payment.count({ where: { billId } });
-    if (payments > 0) throw new ApiError(409, 'BILL_HAS_PAYMENTS'); // payments are never deleted (BR-13)
+    const reports = await tx.paymentReport.count({ where: { billId } });
+    if (payments + reports > 0) throw new ApiError(409, 'BILL_HAS_PAYMENTS'); // payments are never deleted (BR-13)
     await tx.bill.delete({ where: { id: billId } });
   });
 }

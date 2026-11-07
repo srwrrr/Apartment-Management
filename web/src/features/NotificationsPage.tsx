@@ -15,6 +15,7 @@ export function notificationText(t: TFunction, n: Pick<NotificationItem, 'type' 
   const p = { ...n.params } as Record<string, unknown>;
   if (typeof p.amount === 'number') p.amount = formatBDT(p.amount);
   if (typeof p.dueDate === 'string') p.dueDate = formatDate(p.dueDate);
+  if (typeof p.date === 'string') p.date = formatDate(p.date);
   if (n.type === 'REQUEST_UPDATE') {
     if (typeof p.status === 'string') return t('notifications.text.REQUEST_UPDATE_STATUS', { ...p, status: t(`requestStatus.${p.status}`) });
     if (p.note) return t('notifications.text.REQUEST_UPDATE_NOTE', p);

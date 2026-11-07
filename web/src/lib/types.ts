@@ -39,6 +39,7 @@ export interface Occupancy {
   startDate: string;
   endDate: string | null;
   isBillingContact: boolean;
+  moveOutNote?: string | null;
   unit: { id: string; unitNumber: string; floor: number };
   resident?: { id: string; fullName: string; phone: string };
 }
@@ -180,7 +181,9 @@ export interface FeeItem {
 }
 
 // ------------------------------------------------------------------ Sprint 4
-export type NotificationType = 'ANNOUNCEMENT' | 'BILL_NEW' | 'BILL_DUE_SOON' | 'BILL_OVERDUE' | 'PAYMENT_RECORDED' | 'REQUEST_NEW' | 'REQUEST_UPDATE' | 'REQUEST_ASSIGNED';
+export type NotificationType =
+  | 'ANNOUNCEMENT' | 'BILL_NEW' | 'BILL_DUE_SOON' | 'BILL_OVERDUE' | 'PAYMENT_RECORDED' | 'REQUEST_NEW' | 'REQUEST_UPDATE' | 'REQUEST_ASSIGNED'
+  | 'PAYMENT_REPORT_NEW' | 'PAYMENT_REPORT_VERIFIED' | 'PAYMENT_REPORT_REJECTED' | 'CERTIFICATE_ISSUED' | 'MOVE_OUT_RECORDED';
 export interface NotificationItem {
   id: string;
   type: NotificationType;
@@ -240,7 +243,7 @@ export interface DuesReport {
 export interface DashboardData {
   month: string;
   building: { totalUnits: number; occupied: number; vacant: number; unavailable: number; residents: number };
-  billing: { billed: number; collected: number; outstanding: number; rate: number | null; openingBalances: { outstanding: number }; overdueBills: number; overdueAmount: number };
+  billing: { billed: number; collected: number; outstanding: number; rate: number | null; openingBalances: { outstanding: number }; overdueBills: number; overdueAmount: number; pendingReports: number };
   maintenance: { pending: number; submitted: number; underReview: number; inProgress: number; resolved: number; overdue: number };
   trend: { month: string; billed: number; collected: number; rate: number | null }[];
   recent: {
@@ -248,4 +251,116 @@ export interface DashboardData {
     payments: { id: string; amount: number; paidOn: string; receiptNo: string; billId: string; unitNumber: string }[];
     requests: { id: string; number: number; title: string; status: RequestStatus; createdAt: string; unitNumber: string }[];
   };
+}
+
+// ------------------------------------------------------------------ Sprint 5
+export type PaymentReportStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
+export interface BillPaymentReport {
+  id: string;
+  amount: number;
+  paidOn: string;
+  method: string;
+  reference: string;
+  status: PaymentReportStatus;
+  rejectReason: string | null;
+  reportedBy: string;
+  screenshotId: string | null;
+  createdAt: string;
+}
+export interface BillPaymentReports {
+  available: number;
+  items: BillPaymentReport[];
+}
+export interface QueueReport extends BillPaymentReport {
+  billId: string;
+  unitNumber: string;
+  billingMonth: string;
+  billKind: 'REGULAR' | 'OPENING_BALANCE';
+  balance: number;
+  duplicate: boolean;
+}
+
+export interface StatementRow {
+  date: string;
+  kind: 'BILL' | 'PAYMENT';
+  billId: string;
+  billKind: 'REGULAR' | 'OPENING_BALANCE';
+  billingMonth: string;
+  paymentId: string | null;
+  receiptNo: string | null;
+  method: string | null;
+  charged: number;
+  paid: number;
+  balance: number;
+}
+export interface Statement {
+  unit: { id: string; unitNumber: string; floor: number };
+  from: string;
+  to: string;
+  opening: number;
+  totalCharged: number;
+  totalPaid: number;
+  closing: number;
+  rows: StatementRow[];
+}
+
+export interface Certificate {
+  id: string;
+  number: string;
+  coversThroughMonth: string;
+  issuedAt: string;
+  unit: { id: string; unitNumber: string };
+  issuedTo: { id: string; fullName: string };
+  issuedBy: string;
+}
+export interface UnitCertificates {
+  items: Certificate[];
+  balance: number;
+  canIssue: boolean;
+}
+
+export interface MoveOutPreview {
+  occupancy: { id: string; type: 'OWNER' | 'TENANT'; startDate: string; isBillingContact: boolean };
+  resident: { id: string; fullName: string; phone: string };
+  unit: { id: string; unitNumber: string; floor: number };
+  balance: number;
+  unpaidBills: { id: string; billingMonth: string; kind: string; balance: number; status: BillStatus }[];
+  pendingReports: { id: string; amount: number; method: string; reference: string; billId: string }[];
+  openRequests: { id: string; number: number; title: string; status: RequestStatus }[];
+  otherOccupants: { occupancyId: string; type: 'OWNER' | 'TENANT'; fullName: string }[];
+  householdMembers: { id: string; fullName: string }[];
+  hasOtherActiveOccupancy: boolean;
+  canIssueCertificate: boolean;
+}
+
+export interface Expense {
+  id: string;
+  spentOn: string;
+  category: string;
+  amount: number;
+  payee: string;
+  description: string | null;
+  receiptId: string | null;
+  recordedBy: string;
+  voided: boolean;
+  voidedAt: string | null;
+  voidedBy: string | null;
+  voidReason: string | null;
+}
+export interface ExpenseList extends Page<Expense> {
+  totalAmount: number;
+}
+export interface IncomeExpenseReport {
+  from: string;
+  to: string;
+  income: number;
+  expenses: number;
+  net: number;
+  months: { month: string; income: number; expenses: number; net: number }[];
+  byCategory: { category: string; amount: number }[];
+}
+export interface BuildingSummary {
+  month: string;
+  total: number;
+  byCategory: { category: string; amount: number }[];
 }

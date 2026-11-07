@@ -10,6 +10,7 @@ import { api, ApiError } from '../lib/api';
 import { errorMessage, fieldErrorsOf } from '../lib/errors';
 import { formatDate, monthLabel, takaString, todayYmd } from '../lib/format';
 import type { BillDetail, Charge, PaymentEntry } from '../lib/types';
+import { BillReportsCard } from './PaymentReportsPage';
 
 /** After any change to a bill, refresh everything that shows money. */
 function useBillRefresh(id: string) {
@@ -432,6 +433,7 @@ export function BillDetailPage() {
         <ChargesCard bill={b} />
         <PaymentsCard bill={b} />
       </div>
+      <BillReportsCard bill={b} />
     </>
   );
 }

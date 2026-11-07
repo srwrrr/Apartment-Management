@@ -9,6 +9,7 @@ interface Settings {
   buildingName: string;
   goLiveDate: string;
   defaultDueDay: number;
+  shareExpenseSummary: boolean;
 }
 
 /** Building name, the day the system starts being used, and the usual due day (BR-10, BR-22). */
@@ -17,14 +18,18 @@ export function SettingsPage() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['settings'], queryFn: () => api.get<Settings>('/api/settings') });
   const [form, setForm] = useState({ buildingName: '', goLiveDate: '', defaultDueDay: '10' });
+  const [share, setShare] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (q.data) setForm({ buildingName: q.data.buildingName, goLiveDate: q.data.goLiveDate, defaultDueDay: String(q.data.defaultDueDay) });
+    if (q.data) {
+      setForm({ buildingName: q.data.buildingName, goLiveDate: q.data.goLiveDate, defaultDueDay: String(q.data.defaultDueDay) });
+      setShare(q.data.shareExpenseSummary);
+    }
   }, [q.data]);
 
   const save = useMutation({
-    mutationFn: () => api.put<Settings>('/api/settings', { buildingName: form.buildingName.trim(), goLiveDate: form.goLiveDate, defaultDueDay: Number(form.defaultDueDay) }),
+    mutationFn: () => api.put<Settings>('/api/settings', { buildingName: form.buildingName.trim(), goLiveDate: form.goLiveDate, defaultDueDay: Number(form.defaultDueDay), shareExpenseSummary: share }),
     onSuccess: async (data) => {
       qc.setQueryData(['settings'], data);
       await qc.invalidateQueries({ queryKey: ['public-settings'] });
@@ -63,6 +68,21 @@ export function SettingsPage() {
           <Field label={t('settings.defaultDueDay')} help={t('settings.dueDayHelp')} error={fields.defaultDueDay}>
             {(p) => <TextInput {...p} type="number" inputMode="numeric" min={1} max={28} required value={form.defaultDueDay} onChange={set('defaultDueDay')} />}
           </Field>
+          <div>
+            <label className="flex min-h-11 items-center gap-2 font-semibold">
+              <input
+                type="checkbox"
+                className="h-5 w-5"
+                checked={share}
+                onChange={(e) => {
+                  setSaved(false);
+                  setShare(e.target.checked);
+                }}
+              />
+              {t('settings.shareExpenseSummary')}
+            </label>
+            <p className="text-sm text-muted">{t('settings.shareExpenseHelp')}</p>
+          </div>
           <Button type="submit" disabled={save.isPending}>
             {t('common.save')}
           </Button>

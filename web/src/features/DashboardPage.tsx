@@ -56,6 +56,13 @@ export function Dashboard() {
             <p className="mt-3 font-semibold text-danger-600" data-testid="dash-overdue">
               {q.data!.billing.overdueBills > 0 ? `${t('dashboard.overdueBills', { count: q.data!.billing.overdueBills })} (${formatBDT(q.data!.billing.overdueAmount)})` : ''}
             </p>
+            {q.data!.billing.pendingReports > 0 && (
+              <p>
+                <Link to="/payment-reports" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline" data-testid="dash-pending-reports">
+                  {t('dashboard.pendingReports', { count: q.data!.billing.pendingReports })}
+                </Link>
+              </p>
+            )}
             {q.data!.billing.openingBalances.outstanding > 0 && <p className="text-muted">{t('dashboard.openingBalances', { amount: formatBDT(q.data!.billing.openingBalances.outstanding) })}</p>}
           </Card>
 

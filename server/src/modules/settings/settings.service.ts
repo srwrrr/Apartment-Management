@@ -8,6 +8,7 @@ export interface Settings {
   buildingName: string;
   goLiveDate: string; // YYYY-MM-DD
   defaultDueDay: number; // BR-10: 1 to 28, so it exists in every month
+  shareExpenseSummary: boolean; // FR-44: off until the administrator turns it on
 }
 
 export async function getSettings(): Promise<Settings> {
@@ -18,12 +19,14 @@ export async function getSettings(): Promise<Settings> {
     buildingName: m.get('buildingName') || 'My Building',
     goLiveDate: m.get('goLiveDate') || todayDhaka(),
     defaultDueDay: Number.isInteger(due) && due >= 1 && due <= 28 ? due : 10,
+    shareExpenseSummary: m.get('shareExpenseSummary') === 'true',
   };
 }
 
 /** Anyone logged in may know the building's name (it is shown in the page header). */
 export async function getPublicSettings() {
-  return { buildingName: (await getSettings()).buildingName };
+  const { buildingName, shareExpenseSummary } = await getSettings();
+  return { buildingName, shareExpenseSummary };
 }
 
 export async function updateSettings(patch: z.infer<typeof settingsUpdateSchema>): Promise<Settings> {
@@ -39,6 +42,7 @@ export async function updateSettings(patch: z.infer<typeof settingsUpdateSchema>
   if (patch.buildingName !== undefined) entries.push(['buildingName', patch.buildingName]);
   if (patch.goLiveDate !== undefined) entries.push(['goLiveDate', patch.goLiveDate]);
   if (patch.defaultDueDay !== undefined) entries.push(['defaultDueDay', String(patch.defaultDueDay)]);
+  if (patch.shareExpenseSummary !== undefined) entries.push(['shareExpenseSummary', String(patch.shareExpenseSummary)]);
   await prisma.$transaction(
     entries.map(([key, value]) => prisma.setting.upsert({ where: { key }, update: { value }, create: { key, value } })),
   );

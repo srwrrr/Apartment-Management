@@ -66,6 +66,13 @@ model User {
   announcementsReceived  AnnouncementRecipient[] @relation("AnnouncementRecipient")
   notifications          Notification[]          @relation("NotificationRecipient")
 
+  paymentReportsMade     PaymentReport[]     @relation("PaymentReporter")
+  paymentReportsReviewed PaymentReport[]     @relation("PaymentReviewer")
+  certificatesReceived   NoDuesCertificate[] @relation("CertificateResident")
+  certificatesIssued     NoDuesCertificate[] @relation("CertificateIssuer")
+  expensesRecorded       Expense[]           @relation("ExpenseRecorder")
+  expensesVoided         Expense[]           @relation("ExpenseVoider")
+
   @@map("users")
 }
 
@@ -101,6 +108,7 @@ model Unit {
   fees                  UnitFee[]
   requests              MaintenanceRequest[]
   announcementAudiences AnnouncementAudience[]
+  certificates          NoDuesCertificate[]
 
   @@map("units")
 }
@@ -113,6 +121,8 @@ model Occupancy {
   startDate        DateTime      @db.Date
   endDate          DateTime?     @db.Date
   isBillingContact Boolean       @default(false)
+  /// FR-56: why a resident was moved out with dues still unpaid.
+  moveOutNote      String?
 
   unit      Unit              @relation(fields: [unitId], references: [id])
   resident  User              @relation(fields: [residentId], references: [id])
@@ -215,6 +225,7 @@ model Bill {
   createdBy      User      @relation("BillCreator", fields: [createdById], references: [id])
   charges        Charge[]
   payments       Payment[]
+  paymentReports PaymentReport[]
 
   @@unique([unitId, billingMonth])
   @@index([billingMonth])
@@ -251,6 +262,7 @@ model Payment {
   bill       Bill  @relation(fields: [billId], references: [id])
   recordedBy User  @relation("PaymentRecorder", fields: [recordedById], references: [id])
   voidedBy   User? @relation("PaymentVoider", fields: [voidedById], references: [id])
+  report     PaymentReport?
 
   @@index([billId])
   @@index([method, reference])
@@ -377,11 +389,15 @@ model Attachment {
   uploadedById    String   @db.Uuid
   requestId       String?  @db.Uuid
   requestUpdateId String?  @db.Uuid
+  paymentReportId String?  @unique @db.Uuid
+  expenseId       String?  @unique @db.Uuid
   createdAt       DateTime @default(now()) @db.Timestamptz
 
   uploadedBy    User                @relation("AttachmentUploader", fields: [uploadedById], references: [id])
   request       MaintenanceRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
   requestUpdate RequestUpdate?      @relation(fields: [requestUpdateId], references: [id], onDelete: Cascade)
+  paymentReport PaymentReport?      @relation(fields: [paymentReportId], references: [id])
+  expense       Expense?            @relation(fields: [expenseId], references: [id])
 
   @@index([requestId])
   @@index([requestUpdateId])
@@ -415,6 +431,11 @@ enum NotificationType {
   REQUEST_NEW
   REQUEST_UPDATE
   REQUEST_ASSIGNED
+  PAYMENT_REPORT_NEW
+  PAYMENT_REPORT_VERIFIED
+  PAYMENT_REPORT_REJECTED
+  CERTIFICATE_ISSUED
+  MOVE_OUT_RECORDED
 }
 
 model Announcement {
@@ -484,4 +505,95 @@ model Notification {
   @@index([userId, readAt])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+// ---------------------------------------------------------------- Sprint 5
+
+enum PaymentReportStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+/// FR-39, FR-40, BR-21: "I've paid". Only verifying it creates a Payment; until then no balance changes.
+model PaymentReport {
+  id           String              @id @default(uuid()) @db.Uuid
+  billId       String              @db.Uuid
+  reportedById String              @db.Uuid
+  amount       Int
+  paidOn       DateTime            @db.Date
+  method       PaymentMethod
+  reference    String
+  status       PaymentReportStatus @default(PENDING)
+  reviewedById String?             @db.Uuid
+  reviewedAt   DateTime?           @db.Timestamptz
+  rejectReason String?
+  paymentId    String?             @unique @db.Uuid
+  createdAt    DateTime            @default(now()) @db.Timestamptz
+
+  bill       Bill        @relation(fields: [billId], references: [id])
+  reportedBy User        @relation("PaymentReporter", fields: [reportedById], references: [id])
+  reviewedBy User?       @relation("PaymentReviewer", fields: [reviewedById], references: [id])
+  payment    Payment?    @relation(fields: [paymentId], references: [id])
+  screenshot Attachment?
+
+  @@index([status, createdAt])
+  @@index([billId])
+  @@index([method, reference])
+  @@map("payment_reports")
+}
+
+/// FR-46, BR-24: proof that a unit owed nothing on the day of issue.
+model NoDuesCertificate {
+  id                 String   @id @default(uuid()) @db.Uuid
+  number             String   @unique
+  unitId             String   @db.Uuid
+  issuedToId         String   @db.Uuid
+  coversThroughMonth DateTime @db.Date
+  issuedById         String   @db.Uuid
+  issuedAt           DateTime @default(now()) @db.Timestamptz
+
+  unit     Unit @relation(fields: [unitId], references: [id])
+  issuedTo User @relation("CertificateResident", fields: [issuedToId], references: [id])
+  issuedBy User @relation("CertificateIssuer", fields: [issuedById], references: [id])
+
+  @@index([unitId])
+  @@index([issuedToId])
+  @@map("no_dues_certificates")
+}
+
+enum ExpenseCategory {
+  STAFF_SALARY
+  GENERATOR_FUEL
+  COMMON_ELECTRICITY
+  WATER
+  CLEANING
+  LIFT
+  SECURITY
+  REPAIRS
+  OTHER
+}
+
+/// FR-43, BR-23. Never deleted: a wrong one is voided with a reason, like a payment.
+model Expense {
+  id           String          @id @default(uuid()) @db.Uuid
+  spentOn      DateTime        @db.Date
+  category     ExpenseCategory
+  amount       Int
+  payee        String
+  description  String?
+  recordedById String          @db.Uuid
+  voidedAt     DateTime?       @db.Timestamptz
+  voidedById   String?         @db.Uuid
+  voidReason   String?
+  createdAt    DateTime        @default(now()) @db.Timestamptz
+  updatedAt    DateTime        @updatedAt @db.Timestamptz
+
+  recordedBy User        @relation("ExpenseRecorder", fields: [recordedById], references: [id])
+  voidedBy   User?       @relation("ExpenseVoider", fields: [voidedById], references: [id])
+  receipt    Attachment?
+
+  @@index([spentOn])
+  @@index([category])
+  @@map("expenses")
 }

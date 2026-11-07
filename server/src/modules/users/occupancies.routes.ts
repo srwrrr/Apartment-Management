@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { occupancyCreateSchema, occupancyUpdateSchema } from '@apt/shared';
+import { moveOutSchema, occupancyCreateSchema, occupancyUpdateSchema } from '@apt/shared';
 import { asyncHandler } from '../../lib/errors';
-import { requireAuth, requirePermission } from '../../middleware/auth';
+import { requireAdmin, requireAuth, requirePermission } from '../../middleware/auth';
 import { createOccupancy, listUnitOccupancies, updateOccupancy } from './occupancies.service';
+import { moveOut, moveOutPreview } from './moveOut.service';
 
 const guard = [requireAuth, requirePermission('residents.manage')];
 
@@ -22,7 +23,11 @@ unitOccupanciesRouter.post(
 
 /** Mounted at /api/occupancies */
 export const occupanciesRouter = Router();
-occupanciesRouter.use(...guard);
+occupanciesRouter.use(requireAuth);
+// FR-56: the move-out wizard is for administrators (it can deactivate accounts and issue certificates).
+occupanciesRouter.get('/:id/move-out-preview', requireAdmin, asyncHandler(async (req, res) => res.json(await moveOutPreview(String(req.params.id)))));
+occupanciesRouter.post('/:id/move-out', requireAdmin, asyncHandler(async (req, res) => res.json(await moveOut(String(req.params.id), moveOutSchema.parse(req.body), req.user!))));
+occupanciesRouter.use(guard[1]!);
 occupanciesRouter.patch(
   '/:id',
   asyncHandler(async (req, res) =>

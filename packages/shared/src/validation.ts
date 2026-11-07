@@ -189,6 +189,7 @@ export const settingsUpdateSchema = z
     buildingName: z.string().trim().min(1).max(80).optional(),
     goLiveDate: ymdSchema.optional(),
     defaultDueDay: z.number().int().min(1).max(28).optional(),
+    shareExpenseSummary: z.boolean().optional(),
   })
   .strict();
 
@@ -303,3 +304,86 @@ export const financeReportQuerySchema = z
     message: 'RANGE_TOO_LONG',
   });
 export const dashboardQuerySchema = z.object({ month: monthSchema.optional() });
+
+// ---------------------------------------------------------------- Sprint 5
+
+/** Forms with a file arrive as text, so a number may be a numeric string. */
+const numberFromForm = (v: unknown) => (typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v) : v);
+const formPoisha = z.preprocess(numberFromForm, poishaSchema);
+
+/** FR-39, BR-21: the transaction ID is required on a report, unlike on a payment the office records itself. */
+export const paymentReportCreateSchema = z.object({
+  amount: formPoisha,
+  paidOn: ymdSchema,
+  method: z.enum(PAYMENT_METHODS),
+  reference: z.string().trim().min(1).max(40),
+});
+
+/** FR-40: the date or amount may be corrected while verifying. */
+export const paymentReportVerifySchema = z
+  .object({ amount: poishaSchema.optional(), paidOn: ymdSchema.optional(), confirm: z.boolean().optional() })
+  .strict();
+export const paymentReportRejectSchema = z.object({ reason: z.string().trim().min(3).max(300) });
+
+export const PAYMENT_REPORT_STATUSES = ['PENDING', 'VERIFIED', 'REJECTED'] as const;
+export const paymentReportListQuerySchema = z.object({
+  status: z.enum(PAYMENT_REPORT_STATUSES).default('PENDING'),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+/** FR-45: a period of days. */
+const statementPeriod = z.object({ from: ymdSchema, to: ymdSchema });
+export const statementQuerySchema = statementPeriod.refine((v) => v.from <= v.to, { path: ['to'], message: 'RANGE_REVERSED' });
+export const myStatementQuerySchema = statementPeriod
+  .extend({ unitId: z.string().uuid() })
+  .refine((v) => v.from <= v.to, { path: ['to'], message: 'RANGE_REVERSED' });
+
+/** FR-46: who it is issued to. Left out, it goes to the unit's billing contact. */
+export const certificateIssueSchema = z.object({ residentId: z.string().uuid().optional() }).strict();
+export const certificateLookupSchema = z.object({ number: z.string().trim().min(1).max(30) });
+
+/** FR-56. `expectedBalance` is the balance the administrator was shown, so a change since then is noticed. */
+export const moveOutPreviewQuerySchema = z.object({ date: ymdSchema.optional() });
+export const moveOutSchema = z
+  .object({
+    endDate: ymdSchema,
+    expectedBalance: z.number().int().min(0),
+    newBillingContactOccupancyId: z.string().uuid().optional(),
+    duesNote: z.preprocess(emptyToUndefined, z.string().trim().min(3).max(500).optional()),
+    issueCertificate: z.boolean().default(false),
+    deactivateAccount: z.boolean().default(false),
+  })
+  .strict();
+
+/** BR-23. */
+export const EXPENSE_CATEGORIES = ['STAFF_SALARY', 'GENERATOR_FUEL', 'COMMON_ELECTRICITY', 'WATER', 'CLEANING', 'LIFT', 'SECURITY', 'REPAIRS', 'OTHER'] as const;
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+
+export const expenseCreateSchema = z.object({
+  spentOn: ymdSchema,
+  category: z.enum(EXPENSE_CATEGORIES),
+  amount: formPoisha,
+  payee: z.string().trim().min(1).max(120),
+  description: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
+});
+/** A blank description clears it, so here '' is kept rather than treated as "not sent". */
+export const expenseUpdateSchema = z
+  .object({
+    spentOn: ymdSchema.optional(),
+    category: z.enum(EXPENSE_CATEGORIES).optional(),
+    amount: formPoisha.optional(),
+    payee: z.string().trim().min(1).max(120).optional(),
+    description: z.string().trim().max(500).optional(),
+  })
+  .strict();
+export const expenseVoidSchema = z.object({ reason: z.string().trim().min(3).max(300) });
+export const expenseListQuerySchema = z.object({
+  category: z.enum(EXPENSE_CATEGORIES).optional(),
+  month: monthSchema.optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+/** FR-44: what residents may see, when the summary is shared. */
+export const buildingSummaryQuerySchema = z.object({ month: monthSchema.optional() });

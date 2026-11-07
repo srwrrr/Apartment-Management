@@ -4,6 +4,9 @@ const dhaka = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' });
 /** 'YYYY-MM-DD' for today in Dhaka. */
 export const todayDhaka = (): string => dhaka.format(new Date());
 
+/** The calendar day in Dhaka of a moment in time. */
+export const ymdDhaka = (d: Date): string => dhaka.format(d);
+
 /** A date-only value as a UTC-midnight Date, suitable for Prisma @db.Date filters. */
 export const dateOnly = (ymd: string): Date => new Date(`${ymd}T00:00:00Z`);
 

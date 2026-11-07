@@ -45,7 +45,7 @@ describe('FR-23 / FR-24 announcements', () => {
     const gone = await occupy('3A');
     await prisma.user.update({ where: { id: gone.resident.id }, data: { isActive: false } });
     const member = await prisma.user.create({ data: { loginId: 'm@test.local', passwordHash: 'x', role: 'RESIDENT', fullName: 'Member', phone: '+8801700000001' } });
-    await prisma.householdMember.create({ data: { occupancyId: one.occupancy.id, userId: member.id } }).catch(() => undefined);
+    await prisma.householdMember.create({ data: { occupancyId: one.occupancy.id, userId: member.id, relation: 'Spouse', addedAt: new Date('2020-06-01T00:00:00Z') } });
     const a = await admin(app);
     const res = await post(a.c, { title: 'Water off', body: 'Tomorrow.', audience: { type: 'ALL' } });
     expect(res.status).toBe(201);
@@ -53,6 +53,7 @@ describe('FR-23 / FR-24 announcements', () => {
     const ids = got.map((g) => g.userId);
     expect(ids).toContain(one.resident.id);
     expect(ids).toContain(two.resident.id);
+    expect(ids).toContain(member.id);
     expect(ids).not.toContain(gone.resident.id);
     expect(ids).not.toContain(a.user.id);
     expect(await prisma.notification.count({ where: { type: 'ANNOUNCEMENT', entityId: res.body.id } })).toBe(ids.length);

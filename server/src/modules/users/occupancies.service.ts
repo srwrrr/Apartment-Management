@@ -9,7 +9,7 @@ type Tx = Prisma.TransactionClient;
 const FAR_FUTURE = new Date('9999-12-31T00:00:00Z');
 
 /** The database also enforces these rules (race-proof); this turns its errors into clear API errors. */
-function mapOccupancyError(e: unknown): never {
+export function mapOccupancyError(e: unknown): never {
   const msg = e instanceof Error ? e.message : '';
   if (msg.includes('occupancies_no_overlap')) throw new ApiError(409, 'OCCUPANCY_OVERLAP');
   if (msg.includes('occupancies_one_billing_contact')) throw new ApiError(409, 'BILLING_CONTACT_EXISTS');

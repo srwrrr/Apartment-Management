@@ -74,4 +74,5 @@ export const api = {
   delete: <T>(url: string) => request<T>('DELETE', url),
   /** POST a form (text fields plus photos). */
   postForm: <T>(url: string, form: FormData) => request<T>('POST', url, form),
+  patchForm: <T>(url: string, form: FormData) => request<T>('PATCH', url, form),
 };

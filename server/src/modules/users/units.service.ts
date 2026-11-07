@@ -21,9 +21,10 @@ function withStatus(unit: Unit, activeOccupancies: number) {
   return { ...unit, status, activeOccupancies };
 }
 
+/** The end date is the day they left, so a stay ending today no longer counts: the unit shows Vacant at once (BR-05, FR-56). */
 export const activeOccupancyWhere = (): Prisma.OccupancyWhereInput => {
   const today = dateOnly(todayDhaka());
-  return { startDate: { lte: today }, OR: [{ endDate: null }, { endDate: { gte: today } }] };
+  return { startDate: { lte: today }, OR: [{ endDate: null }, { endDate: { gt: today } }] };
 };
 
 function mapUniqueError(e: unknown): never {

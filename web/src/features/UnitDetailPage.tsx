@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react';
+import { BILL_READ_PERMISSIONS } from '@apt/shared';
+import { UnitCertificatesSection } from './StatementPage';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -196,6 +198,11 @@ export function UnitDetailPage() {
         </Link>
       </div>
       <PageHeader title={`${t('units.number')} ${u.unitNumber}`}>
+        {BILL_READ_PERMISSIONS.some((p) => can(p)) && (
+          <Link to={`/units/${id}/statement`} className="inline-flex min-h-11 items-center rounded-lg border border-line px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50">
+            {t('statement.open')}
+          </Link>
+        )}
         {can('units.manage') && <Button variant="secondary" onClick={() => setEditing(true)}>{t('common.edit')}</Button>}
       </PageHeader>
       <div className="grid gap-4 lg:grid-cols-2">
@@ -236,6 +243,7 @@ export function UnitDetailPage() {
                     <p className="text-sm text-muted">
                       {formatDate(o.startDate)} – {o.endDate ? formatDate(o.endDate) : t('units.present')}
                     </p>
+                    {o.moveOutNote && <p className="text-sm text-muted">{t('moveOut.leftWithDues', { note: o.moveOutNote })}</p>}
                   </div>
                   <Chip tone="blue">{t(`units.type.${o.type}`)}</Chip>
                   {!o.endDate && o.isBillingContact && <Chip tone="green">{t('units.billingContact')}</Chip>}
@@ -249,6 +257,11 @@ export function UnitDetailPage() {
                       <Button variant="secondary" onClick={() => setEnding(o)}>
                         {t('units.endStay')}
                       </Button>
+                      {user?.role === 'ADMIN' && (
+                        <Link to={`/occupancies/${o.id}/move-out`} className="inline-flex min-h-11 items-center rounded-lg bg-danger-600 px-4 py-2 font-semibold text-white hover:bg-red-800">
+                          {t('moveOut.button')}
+                        </Link>
+                      )}
                     </div>
                   )}
                 </li>
@@ -258,6 +271,7 @@ export function UnitDetailPage() {
           {makeContact.isError && <div className="mt-3"><Notice>{errorMessage(t, makeContact.error)}</Notice></div>}
         </Card>
       )}
+      {can('billing.view') && <UnitCertificatesSection unitId={id} stays={all} />}
       {can('billing.manage') && <UnitFeesSection unitId={id} />}
       {user?.role === 'ADMIN' && <OpeningBalanceSection unitId={id} />}
       {editing && <UnitFormModal unit={u} onClose={() => setEditing(false)} />}

@@ -61,7 +61,11 @@
     "announcements": "Announcements",
     "notifications": "Notifications",
     "reports": "Reports",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "paymentReports": "Payment reports",
+    "expenses": "Expenses",
+    "statement": "Statement",
+    "buildingSummary": "Building spending"
   },
   "roles": {
     "RESIDENT": "Resident",
@@ -242,7 +246,13 @@
     "REQUEST_FINISHED": "This request is already finished, so it cannot be changed.",
     "INVALID_TRANSITION": "That change is not possible for this request right now. Refresh the page and check its status.",
     "REOPEN_WINDOW_PASSED": "It was marked as fixed more than 7 days ago, so it can no longer be reopened. Please send a new request.",
-    "ANNOUNCEMENT_ARCHIVED": "This announcement is archived and can no longer be edited."
+    "ANNOUNCEMENT_ARCHIVED": "This announcement is archived and can no longer be edited.",
+    "REPORT_ALREADY_REVIEWED": "Someone has already dealt with this report.",
+    "DUES_OUTSTANDING": "This unit still owes money, so no certificate can be issued.",
+    "NOTHING_BILLED": "This unit has never been billed, so there is nothing to certify.",
+    "STALE_PREVIEW": "The balance changed while you were working. Please review the details again.",
+    "HAS_OTHER_OCCUPANCY": "This resident still lives in another unit, so the account stays active.",
+    "EXPENSE_VOIDED": "This expense was voided and can no longer be changed."
   },
   "fieldErrors": {
     "INVALID": "This value is not valid.",
@@ -280,7 +290,12 @@
     "NOTE_REQUIRED": "Please write a short explanation.",
     "AUDIENCE_EMPTY": "No residents would receive this. Choose a different audience.",
     "RANGE_REVERSED": "The end month must not be before the start month.",
-    "RANGE_TOO_LONG": "Choose a period of less than 3 years."
+    "RANGE_TOO_LONG": "Choose a period of less than 3 years.",
+    "MOVE_OUT_FUTURE": "The move-out date cannot be in the future.",
+    "NEW_BILLING_CONTACT_REQUIRED": "Choose who will receive the bills from now on.",
+    "SPENT_ON_FUTURE": "The date cannot be in the future.",
+    "INVALID_RESIDENT": "Choose someone who has lived in this unit.",
+    "RESIDENT_REQUIRED": "This unit has no billing contact. Choose a resident."
   },
   "directory": {
     "title": "Resident directory",
@@ -484,7 +499,9 @@
     "goLiveHelp": "Opening balances are dated from this day. It cannot be changed once an opening balance exists.",
     "defaultDueDay": "Usual due day of the month",
     "dueDayHelp": "Bills are due on this day (1 to 28) unless you pick another date when generating.",
-    "saved": "Settings saved."
+    "saved": "Settings saved.",
+    "shareExpenseSummary": "Share a spending summary with residents",
+    "shareExpenseHelp": "Residents see monthly totals by category. They never see who was paid or any receipts."
   },
   "receipt": {
     "title": "Payment receipt",
@@ -637,7 +654,12 @@
       "REQUEST_UPDATE": "Request #{{number}} ({{title}}) was updated.",
       "REQUEST_UPDATE_STATUS": "Request #{{number}} ({{title}}) is now: {{status}}.",
       "REQUEST_UPDATE_NOTE": "New note on request #{{number}} ({{title}}).",
-      "REQUEST_ASSIGNED": "Request #{{number}} from unit {{unit}} was assigned to you: {{title}}"
+      "REQUEST_ASSIGNED": "Request #{{number}} from unit {{unit}} was assigned to you: {{title}}",
+      "PAYMENT_REPORT_NEW": "Unit {{unit}} reported a payment of {{amount}}. It needs checking.",
+      "PAYMENT_REPORT_VERIFIED": "Your payment of {{amount}} for unit {{unit}} was verified.",
+      "PAYMENT_REPORT_REJECTED": "Your payment report of {{amount}} for unit {{unit}} was not accepted: {{reason}}",
+      "CERTIFICATE_ISSUED": "No-dues certificate {{number}} was issued for unit {{unit}}.",
+      "MOVE_OUT_RECORDED": "Your stay in unit {{unit}} was recorded as ended on {{date}}."
     }
   },
   "announcements": {
@@ -716,7 +738,8 @@
     "recentRequests": "Latest requests",
     "recentAnnouncements": "Latest announcements",
     "none": "Nothing yet.",
-    "reports": "Reports"
+    "reports": "Reports",
+    "pendingReports": "{{count}} payment reports waiting to be checked"
   },
   "reports": {
     "title": "Reports",
@@ -743,5 +766,169 @@
     "noContact": "No billing contact",
     "print": "Print",
     "total": "Total"
+  },
+  "paymentReports": {
+    "title": "Payment reports",
+    "iPaid": "I've paid",
+    "reportTitle": "Report a payment",
+    "reportHelp": "The office will check this against its records. Your balance changes once it is verified.",
+    "canReport": "You can report up to {{amount}}.",
+    "nothingToReport": "Everything due on this bill has already been reported and is waiting to be checked.",
+    "reference": "Transaction ID or reference",
+    "screenshot": "Screenshot",
+    "screenshotHelp": "JPG, PNG, WEBP or PDF, up to 5 MB.",
+    "send": "Send report",
+    "sent": "Your report was sent.",
+    "onThisBill": "Reported payments",
+    "status": {
+      "PENDING": "Waiting for verification",
+      "VERIFIED": "Verified",
+      "REJECTED": "Not accepted"
+    },
+    "tabs": {
+      "PENDING": "Waiting",
+      "VERIFIED": "Verified",
+      "REJECTED": "Not accepted"
+    },
+    "empty": "Nothing here.",
+    "reportedBy": "Reported by {{name}}",
+    "viewScreenshot": "View screenshot",
+    "noScreenshot": "No screenshot",
+    "balanceNow": "Balance now: {{amount}}",
+    "duplicate": "This transaction ID was already used on another payment or report.",
+    "verify": "Verify",
+    "verifyTitle": "Verify this payment",
+    "verifyHelp": "You can correct the date or amount. This creates the payment and its receipt.",
+    "verifyAnyway": "Verify anyway",
+    "reject": "Reject",
+    "rejectTitle": "Reject this report",
+    "rejectReason": "Reason (the resident will see this)",
+    "openBill": "Open bill"
+  },
+  "statement": {
+    "title": "Statement of account",
+    "unit": "Unit",
+    "from": "From",
+    "to": "To",
+    "date": "Date",
+    "description": "Details",
+    "charged": "Charged",
+    "paid": "Paid",
+    "balance": "Balance",
+    "opening": "Opening balance",
+    "closing": "Closing balance",
+    "bill": "Bill",
+    "payment": "Payment",
+    "downloadPdf": "Download PDF",
+    "none": "No bills or payments in this period.",
+    "noUnits": "You have no bills yet.",
+    "open": "Statement"
+  },
+  "certificate": {
+    "title": "No-Dues Certificate",
+    "number": "Certificate no.",
+    "body": "This is to certify that the unit named below owed nothing to the building on the date of issue.",
+    "unit": "Unit",
+    "resident": "Issued to",
+    "coversThrough": "Latest month billed",
+    "issuedOn": "Date of issue",
+    "issuedBy": "Issued by",
+    "limit": "This certificate does not cover months that had not been billed on the date of issue.",
+    "signature": "Committee signature",
+    "seal": "Seal",
+    "section": "No-dues certificates",
+    "mine": "My certificates",
+    "none": "None issued yet.",
+    "issue": "Issue certificate",
+    "issueTo": "Issue to",
+    "blocked": "A certificate cannot be issued: {{amount}} is still owed.",
+    "neverBilled": "A certificate cannot be issued: this unit has never been billed.",
+    "download": "Download",
+    "lookup": "Check a certificate number",
+    "lookupNumber": "Certificate number",
+    "lookupButton": "Check",
+    "genuine": "Genuine: {{number}}, unit {{unit}}, issued to {{name}} on {{date}}.",
+    "notFound": "No certificate has this number."
+  },
+  "moveOut": {
+    "button": "Move out",
+    "title": "Move out: {{name}}, unit {{unit}}",
+    "date": "Move-out date",
+    "dues": "Money owed on this unit",
+    "noDues": "Nothing is owed on this unit.",
+    "owed": "Owed: {{amount}}",
+    "recordPayment": "Open the bill to record a payment",
+    "duesNote": "Why is this resident leaving with dues unpaid?",
+    "duesNoteHelp": "The dues stay on the unit’s bills and in the dues report.",
+    "pendingReports": "Payment reports still waiting to be checked",
+    "openRequests": "Open maintenance requests (these stay open)",
+    "newContact": "Who will receive the bills from now on?",
+    "choose": "Choose…",
+    "household": "These household members lose access: {{names}}",
+    "issueCertificate": "Issue a no-dues certificate",
+    "certificateUnavailable": "A no-dues certificate is not available, because the balance is not ৳0 or the unit has never been billed.",
+    "deactivate": "Deactivate this account",
+    "livesElsewhere": "This resident still lives elsewhere, so the account stays active.",
+    "summary": "What will happen",
+    "sumEnd": "The stay ends on {{date}}.",
+    "sumContact": "{{name}} becomes the billing contact.",
+    "sumVacant": "The unit shows as Vacant.",
+    "sumDues": "{{amount}} stays owed on the unit.",
+    "sumCertificate": "A no-dues certificate is issued.",
+    "sumDeactivate": "The account is deactivated and logged out everywhere.",
+    "confirm": "Confirm move-out",
+    "done": "Move-out recorded.",
+    "certificateNumber": "Certificate {{number}} was issued.",
+    "leftWithDues": "Left with dues: {{note}}"
+  },
+  "expenses": {
+    "title": "Expenses",
+    "add": "Add expense",
+    "editTitle": "Edit expense",
+    "date": "Date",
+    "category": "Category",
+    "allCategories": "All categories",
+    "amount": "Amount (৳)",
+    "payee": "Paid to",
+    "description": "Description",
+    "receipt": "Receipt photo",
+    "receiptReplace": "Replace the receipt photo",
+    "receiptHelp": "JPG, PNG, WEBP or PDF, up to 5 MB.",
+    "viewReceipt": "View receipt",
+    "month": "Month",
+    "empty": "No expenses.",
+    "total": "Total (without voided): {{amount}}",
+    "void": "Void",
+    "voidTitle": "Void this expense",
+    "voidHelp": "It stays in the list, crossed out, and no longer counts in any total.",
+    "voidReason": "Reason",
+    "voided": "Voided",
+    "recordedBy": "Recorded by {{name}}",
+    "categories": {
+      "STAFF_SALARY": "Staff salary",
+      "GENERATOR_FUEL": "Generator fuel",
+      "COMMON_ELECTRICITY": "Common-area electricity",
+      "WATER": "Water",
+      "CLEANING": "Cleaning",
+      "LIFT": "Lift",
+      "SECURITY": "Security",
+      "REPAIRS": "Repairs",
+      "OTHER": "Other"
+    }
+  },
+  "incomeExpense": {
+    "title": "Income and expenses",
+    "help": "Money actually received and spent in each month, by the date of payment.",
+    "income": "Income",
+    "expenses": "Expenses",
+    "net": "Difference",
+    "byCategory": "Expenses by category"
+  },
+  "buildingSummary": {
+    "title": "Where the money goes",
+    "month": "Month",
+    "total": "Total spent",
+    "none": "Nothing was spent this month.",
+    "off": "This summary is not being shared."
   }
 }

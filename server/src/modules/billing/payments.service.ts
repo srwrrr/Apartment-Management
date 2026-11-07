@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { paymentInputSchema, voidPaymentSchema } from '@apt/shared';
 import { prisma } from '../../lib/prisma';
@@ -18,10 +19,19 @@ const receiptNumber = (year: number, n: number) => `RCPT-${year}-${String(n).pad
  * so numbers never repeat or skip (BR-14).
  */
 export async function recordPayment(billId: string, input: z.infer<typeof paymentInputSchema>, actor: Actor) {
+  const paymentId = await prisma.$transaction((tx) => recordPaymentIn(tx, billId, input, actor));
+  return { paymentId, bill: await getBill(billId) };
+}
+
+/**
+ * The same step inside a transaction someone else opened (FR-40: verifying a report).
+ * `fromReport` is the report being verified: it does not count as a duplicate of itself, and its reporter hears
+ * about the outcome from the report instead of being told twice.
+ */
+export async function recordPaymentIn(tx: Prisma.TransactionClient, billId: string, input: z.infer<typeof paymentInputSchema>, actor: Actor, fromReport?: { id: string; reportedById: string }) {
   if (input.paidOn > todayDhaka()) {
     throw new ApiError(400, 'VALIDATION_FAILED', { paidOn: { code: 'PAID_ON_FUTURE' } });
   }
-  const paymentId = await prisma.$transaction(async (tx) => {
     await lockBill(tx, billId);
     const s = await summaryFor(tx, billId);
     if (input.amount > s.balance) {
@@ -33,7 +43,13 @@ export async function recordPayment(billId: string, input: z.infer<typeof paymen
         where: { method: input.method, reference: { equals: input.reference, mode: 'insensitive' }, voidedAt: null },
         select: { id: true },
       });
-      if (dup) throw new ApiError(409, 'DUPLICATE_REFERENCE');
+      // A report still waiting with the same ID is the same money, not yet entered (FR-40). A rejected one is not:
+      // correcting a mistake means reporting the same ID again.
+      const pending = await tx.paymentReport.findFirst({
+        where: { method: input.method, reference: { equals: input.reference, mode: 'insensitive' }, status: 'PENDING', id: { not: fromReport?.id } },
+        select: { id: true },
+      });
+      if (dup || pending) throw new ApiError(409, 'DUPLICATE_REFERENCE');
     }
     const year = Number(input.paidOn.slice(0, 4));
     const [counter] = await tx.$queryRaw<{ value: number }[]>`
@@ -59,7 +75,8 @@ export async function recordPayment(billId: string, input: z.infer<typeof paymen
       select: { billingContactId: true, billingMonth: true, kind: true, unit: { select: { unitNumber: true } } },
     });
     if (bill.billingContactId) {
-      await notify(tx, await householdOf(tx, [bill.billingContactId]), {
+      const household = (await householdOf(tx, [bill.billingContactId])).filter((u) => u !== fromReport?.reportedById);
+      await notify(tx, household, {
         type: 'PAYMENT_RECORDED',
         params: { unit: bill.unit.unitNumber, amount: input.amount, receiptNo, month: ymdOf(bill.billingMonth).slice(0, 7), kind: bill.kind },
         link: `/bills/${billId}`,
@@ -67,8 +84,6 @@ export async function recordPayment(billId: string, input: z.infer<typeof paymen
       });
     }
     return payment.id;
-  });
-  return { paymentId, bill: await getBill(billId) };
 }
 
 /** BR-13: payments are never deleted. A wrong one is voided with a reason, and stays visible in the history. */
