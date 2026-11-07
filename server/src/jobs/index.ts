@@ -1,5 +1,7 @@
 import { autoCloseResolved } from '../modules/maintenance/requests.service';
 
+import { sendBillReminders } from '../modules/billing/reminders';
+
 const HOUR = 60 * 60 * 1000;
 
 async function run(name: string, job: () => Promise<number>) {
@@ -16,7 +18,10 @@ async function run(name: string, job: () => Promise<number>) {
  * (Sprint 4 moves these to a daily schedule alongside the bill reminders.)
  */
 export function startJobs() {
-  const tick = () => run('auto-close resolved requests', () => autoCloseResolved());
+  const tick = async () => {
+    await run('auto-close resolved requests', () => autoCloseResolved());
+    await run('bill reminders', () => sendBillReminders());
+  };
   void tick();
   setInterval(tick, HOUR).unref();
 }

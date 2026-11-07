@@ -6,12 +6,14 @@ import { api } from '../lib/api';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitch, TextSizeSwitch } from '../components/Preferences';
 import { Button } from '../components/ui';
+import { useUnreadCount } from '../features/NotificationsPage';
 import { useAuth } from './auth';
 
 export function Layout() {
   const { t } = useTranslation();
   const { user, can, logout } = useAuth();
   const navigate = useNavigate();
+  const unread = useUnreadCount().data ?? 0;
   const [open, setOpen] = useState(false);
   // The building's name is a setting the administrator can change (shown for everyone who is logged in).
   const building = useQuery({ queryKey: ['public-settings'], queryFn: () => api.get<{ buildingName: string }>('/api/settings/public'), staleTime: 5 * 60_000 });
@@ -27,6 +29,8 @@ export function Layout() {
     { to: '/residents', label: t('nav.residents'), show: can('residents.manage') },
     { to: '/bills', label: t('nav.bills'), show: user?.role === 'RESIDENT' || BILL_READ_PERMISSIONS.some((p) => can(p)) },
     { to: '/requests', label: requestsLabel, show: true },
+    { to: '/announcements', label: t('nav.announcements'), show: true },
+    { to: '/reports', label: t('nav.reports'), show: can('reports.view') },
     { to: '/fees', label: t('nav.fees'), show: can('billing.manage') },
     { to: '/directory', label: t('nav.directory'), show: can('directory.view') },
     { to: '/staff', label: t('nav.staff'), show: user?.role === 'ADMIN' },
@@ -70,6 +74,16 @@ export function Layout() {
                   </li>
                 ))}
               <li className="sm:ml-auto">
+                <NavLink to="/notifications" className={linkClass} onClick={() => setOpen(false)} aria-label={unread > 0 ? t('notifications.bell', { count: unread }) : t('notifications.bellNone')}>
+                  {t('nav.notifications')}
+                  {unread > 0 && (
+                    <span data-testid="unread-badge" className="ms-2 inline-block min-w-6 rounded-full bg-danger-600 px-2 text-center text-sm font-bold text-white">
+                      {unread > 99 ? '99+' : unread}
+                    </span>
+                  )}
+                </NavLink>
+              </li>
+              <li>
                 <NavLink to="/change-password" className={linkClass} onClick={() => setOpen(false)}>
                   {t('common.changePassword')}
                 </NavLink>

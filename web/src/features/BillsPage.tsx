@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { BILL_STATUSES, MANUAL_CHARGE_TYPES, formatBDT, parseTaka } from '@apt/shared';
@@ -180,10 +180,11 @@ function NewBillModal({ onClose }: { onClose: () => void }) {
 function StaffBills() {
   const { t } = useTranslation();
   const { can } = useAuth();
-  const [status, setStatus] = useState('');
+  const [sp] = useSearchParams(); // the dues report links here with ?q=unit
+  const [status, setStatus] = useState(sp.get('status') ?? '');
   const [month, setMonth] = useState('');
   const [kind, setKind] = useState('');
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(sp.get('q') ?? '');
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
   const search = useDebounced(q.trim());

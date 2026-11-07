@@ -7,6 +7,7 @@ import { prisma } from '../../lib/prisma';
 import { ApiError, assertUuid, forbidden, notFound } from '../../lib/errors';
 import { addMonths, currentMonthDhaka, dateOnly, monthRange, ymdOf } from '../../lib/dates';
 import { getSettings } from '../settings/settings.service';
+import { householdsOf } from '../notifications/notify';
 
 type Tx = Prisma.TransactionClient;
 type Actor = { id: string; role: 'RESIDENT' | 'STAFF' | 'ADMIN' };
@@ -285,6 +286,19 @@ export async function generateBills(input: z.infer<typeof generateBillsSchema>, 
       await tx.charge.createMany({
         data: bills.flatMap(({ id, plan }) => plan.charges.map((c) => ({ billId: id, type: c.type, amount: c.amount, description: c.description }))),
       });
+      // FR-09, FR-25: each billing contact, and their household, hears about the new bill, in the same transaction.
+      const contacts = [...new Set(planned.flatMap((p) => (p.billingContactId ? [p.billingContactId] : [])))];
+      const households = await householdsOf(tx, contacts);
+      const notices = bills.flatMap(({ id, plan }) =>
+        (plan.billingContactId ? (households.get(plan.billingContactId) ?? []) : []).map((userId) => ({
+          userId,
+          type: 'BILL_NEW' as const,
+          params: { unit: plan.unitNumber, month: input.month, amount: plan.total, dueDate: ymdOf(dueDate) },
+          link: `/bills/${id}`,
+          entityId: id,
+        })),
+      );
+      if (notices.length) await tx.notification.createMany({ data: notices, skipDuplicates: true });
     });
   } catch (e) {
     // Someone else generated the same month a moment ago. Nothing was saved; check the preview again.

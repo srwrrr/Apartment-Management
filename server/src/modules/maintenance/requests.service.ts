@@ -7,6 +7,7 @@ import { removeStored, storeImages } from '../../lib/files';
 import { todayDhaka } from '../../lib/dates';
 import type { AuthUser } from '../../types';
 import { slaHours, getSla, type Sla } from './sla';
+import { householdOf, maintenanceStaff, notify } from '../notifications/notify';
 
 type Tx = Prisma.TransactionClient;
 
@@ -139,6 +140,29 @@ async function lockRequest(tx: Tx, id: string) {
 
 const note = (tx: Tx, data: Prisma.RequestUpdateUncheckedCreateInput) => tx.requestUpdate.create({ data, select: { id: true } });
 
+// ----------------------------------------------------------- notifications (FR-21, FR-25)
+
+async function facts(tx: Tx, id: string) {
+  const r = await tx.maintenanceRequest.findUniqueOrThrow({
+    where: { id },
+    select: { number: true, title: true, submittedById: true, assignedToId: true, unit: { select: { unitNumber: true } } },
+  });
+  return { number: r.number, title: r.title, unit: r.unit.unitNumber, submittedById: r.submittedById, assignedToId: r.assignedToId };
+}
+
+/**
+ * Tells the people who care about a change on a request, except the person who made it. The submitter's household
+ * hears about every status change and shared note; the assignee hears about changes made by others.
+ * Internal notes tell nobody. Runs inside the action's own transaction, so a rolled-back change tells nobody.
+ */
+async function tellAboutRequest(tx: Tx, id: string, actorId: string | null, params: Record<string, unknown>, opts: { assignee?: boolean } = {}) {
+  const f = await facts(tx, id);
+  const audience = new Set(await householdOf(tx, [f.submittedById]));
+  if (f.assignedToId && opts.assignee !== false) audience.add(f.assignedToId);
+  if (actorId) audience.delete(actorId);
+  await notify(tx, audience, { type: 'REQUEST_UPDATE', params: { number: f.number, title: f.title, unit: f.unit, ...params }, link: `/requests/${id}`, entityId: id });
+}
+
 // -------------------------------------------------------------- submitting (FR-16, FR-17)
 
 /** The units this person lives in right now (their own stay, or as a household member). */
@@ -166,7 +190,8 @@ export async function createRequest(user: AuthUser, input: z.infer<typeof reques
   const sla = await getSla();
   const stored = await storeImages(files); // checks every photo before anything is saved
   try {
-    const created = await prisma.maintenanceRequest.create({
+    const created = await prisma.$transaction(async (tx) => {
+    const c = await tx.maintenanceRequest.create({
       data: {
         submittedById: user.id,
         unitId,
@@ -178,7 +203,17 @@ export async function createRequest(user: AuthUser, input: z.infer<typeof reques
         attachments: { create: stored.map((s) => ({ ...s, uploadedById: user.id })) },
         updates: { create: { authorId: user.id, kind: 'STATUS_CHANGE', toValue: 'SUBMITTED' } },
       },
-      select: { id: true },
+      select: { id: true, number: true },
+    });
+    // The people who look after maintenance hear about it at once.
+    const staff = (await maintenanceStaff(tx)).filter((s) => s !== user.id);
+    await notify(tx, staff, {
+      type: 'REQUEST_NEW',
+      params: { number: c.number, title: input.title, unit: units.find((u) => u.id === unitId)!.unitNumber },
+      link: `/requests/${c.id}`,
+      entityId: c.id,
+    });
+    return c;
     });
     return getRequest(created.id, user);
   } catch (e) {
@@ -318,7 +353,10 @@ export async function setPriority(id: string, priority: RequestPriority, user: A
     const dueAt = new Date(r.createdAt.getTime() + slaHours(sla, priority) * 3_600_000);
     await tx.maintenanceRequest.update({ where: { id }, data: { priority, dueAt, ...(r.status === 'SUBMITTED' && { status: 'UNDER_REVIEW' }) } });
     await note(tx, { requestId: id, authorId: user.id, kind: 'PRIORITY_CHANGE', fromValue: r.priority, toValue: priority });
-    if (r.status === 'SUBMITTED') await note(tx, { requestId: id, authorId: user.id, kind: 'STATUS_CHANGE', fromValue: 'SUBMITTED', toValue: 'UNDER_REVIEW' });
+    if (r.status === 'SUBMITTED') {
+      await note(tx, { requestId: id, authorId: user.id, kind: 'STATUS_CHANGE', fromValue: 'SUBMITTED', toValue: 'UNDER_REVIEW' });
+      await tellAboutRequest(tx, id, user.id, { status: 'UNDER_REVIEW' });
+    }
   });
   return getRequest(id, user);
 }
@@ -338,6 +376,12 @@ export async function assignRequest(id: string, staffId: string, user: AuthUser)
     await tx.maintenanceRequest.update({ where: { id }, data: { assignedToId: staff.id, ...(r.status === 'SUBMITTED' && { status: 'UNDER_REVIEW' }) } });
     await note(tx, { requestId: id, authorId: user.id, kind: 'ASSIGNMENT', fromValue: previous?.fullName ?? null, toValue: staff.fullName });
     if (r.status === 'SUBMITTED') await note(tx, { requestId: id, authorId: user.id, kind: 'STATUS_CHANGE', fromValue: 'SUBMITTED', toValue: 'UNDER_REVIEW' });
+    // The new person is told it is theirs; the resident is told it is being looked at.
+    const f = await facts(tx, id);
+    if (staff.id !== user.id) {
+      await notify(tx, [staff.id], { type: 'REQUEST_ASSIGNED', params: { number: f.number, title: f.title, unit: f.unit }, link: `/requests/${id}`, entityId: id });
+    }
+    if (r.status === 'SUBMITTED') await tellAboutRequest(tx, id, user.id, { status: 'UNDER_REVIEW' }, { assignee: false });
   });
   return getRequest(id, user);
 }
@@ -389,6 +433,7 @@ export async function transition(id: string, to: RequestStatus, text: string | u
       },
     });
     await note(tx, { requestId: id, authorId: user.id, kind: 'STATUS_CHANGE', fromValue: r.status, toValue: to, note: text ?? null });
+    await tellAboutRequest(tx, id, user.id, { status: to });
   });
   return getRequest(id, user);
 }
@@ -412,6 +457,7 @@ export async function addNote(id: string, input: { note: string; isInternal: boo
       if (stored.length) {
         await tx.attachment.createMany({ data: stored.map((s) => ({ ...s, uploadedById: user.id, requestUpdateId: update.id })) });
       }
+      if (!input.isInternal) await tellAboutRequest(tx, id, user.id, { note: true });
     });
   } catch (e) {
     await removeStored(stored.map((s) => s.storedName));
@@ -432,6 +478,7 @@ export async function autoCloseResolved(now = new Date()): Promise<number> {
     for (const { id } of due) {
       await tx.maintenanceRequest.update({ where: { id }, data: { status: 'CLOSED', closedAt: now } });
       await note(tx, { requestId: id, authorId: null, kind: 'STATUS_CHANGE', fromValue: 'RESOLVED', toValue: 'CLOSED' });
+      await tellAboutRequest(tx, id, null, { status: 'CLOSED' });
     }
     return due.length;
   });

@@ -8,6 +8,7 @@ import { errorMessage } from '../lib/errors';
 import { formatDate } from '../lib/format';
 import { BILL_READ_PERMISSIONS, formatBDT } from '@apt/shared';
 import type { MyProfile } from '../lib/types';
+import { Dashboard } from './DashboardPage';
 
 function BalanceCard() {
   const { t } = useTranslation();
@@ -61,6 +62,13 @@ export function HomePage() {
   const { t } = useTranslation();
   const { user, can } = useAuth();
   if (!user) return null;
+  // Administrators, and staff granted reports.view, open on the building overview (FR-27).
+  if (user.role !== 'RESIDENT' && can('reports.view')) return (
+      <>
+        <PageHeader title={t('home.welcome', { name: user.fullName })} />
+        <Dashboard />
+      </>
+    );
   const shortcuts = [
     { to: '/units', label: t('nav.units'), show: can('units.manage') || can('residents.manage') },
     { to: '/residents', label: t('nav.residents'), show: can('residents.manage') },

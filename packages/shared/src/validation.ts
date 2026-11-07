@@ -249,3 +249,57 @@ export const requestListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
+
+// ------------------------------------------------ announcements, notifications, reports (Sprint 4)
+export const ANNOUNCEMENT_CATEGORIES = ['GENERAL', 'MAINTENANCE', 'MEETING', 'SERVICE_INTERRUPTION', 'RULES'] as const;
+export const AUDIENCE_TYPES = ['ALL', 'UNITS', 'FLOORS', 'OWNERS', 'TENANTS'] as const;
+
+/** FR-24: who an announcement is for. */
+export const announcementAudienceSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('ALL') }),
+  z.object({ type: z.literal('OWNERS') }),
+  z.object({ type: z.literal('TENANTS') }),
+  z.object({ type: z.literal('UNITS'), unitIds: z.array(z.string().uuid()).min(1).max(200) }),
+  z.object({ type: z.literal('FLOORS'), floors: z.array(z.number().int().min(-2).max(100)).min(1).max(103) }),
+]);
+export type AnnouncementAudience = z.infer<typeof announcementAudienceSchema>;
+
+/** FR-23. */
+export const announcementCreateSchema = z.object({
+  title: z.string().trim().min(3).max(150),
+  body: z.string().trim().min(1).max(5000),
+  category: z.enum(ANNOUNCEMENT_CATEGORIES).default('GENERAL'),
+  isImportant: z.boolean().default(false),
+  audience: announcementAudienceSchema,
+});
+/** An announcement can be corrected afterwards, but not re-addressed: the people it reached stay as they were. */
+export const announcementUpdateSchema = z
+  .object({
+    title: z.string().trim().min(3).max(150).optional(),
+    body: z.string().trim().min(1).max(5000).optional(),
+    category: z.enum(ANNOUNCEMENT_CATEGORIES).optional(),
+    isImportant: z.boolean().optional(),
+  })
+  .strict()
+  .refine((v) => Object.keys(v).length > 0, 'NOTHING_TO_UPDATE');
+export const announcementListQuerySchema = z.object({
+  archived: z.enum(['true', 'false', 'all']).default('false'),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export const notificationListQuerySchema = z.object({
+  unread: z.enum(['true']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+/** FR-15: a period of billing months, 'YYYY-MM' to 'YYYY-MM' (at most three years). */
+export const financeReportQuerySchema = z
+  .object({ from: monthSchema, to: monthSchema })
+  .refine((v) => v.from <= v.to, { path: ['to'], message: 'RANGE_REVERSED' })
+  .refine((v) => (Number(v.to.slice(0, 4)) - Number(v.from.slice(0, 4))) * 12 + Number(v.to.slice(5)) - Number(v.from.slice(5)) < 36, {
+    path: ['to'],
+    message: 'RANGE_TOO_LONG',
+  });
+export const dashboardQuerySchema = z.object({ month: monthSchema.optional() });

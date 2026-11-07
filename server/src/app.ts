@@ -17,6 +17,9 @@ import { settingsRouter } from './modules/settings/settings.routes';
 import { attachmentsRouter, myRequestsRouter, myTasksRouter, requestsRouter } from './modules/maintenance/maintenance.routes';
 import { billsRouter, chargesRouter, feesRouter, meBillingRouter, paymentsRouter, unitBillingRouter } from './modules/billing/billing.routes';
 import { preferencesRouter } from './modules/users/preferences.routes';
+import { notificationsRouter } from './modules/notifications/notifications.routes';
+import { announcementsRouter } from './modules/announcements/announcements.routes';
+import { dashboardRouter, reportsRouter } from './modules/reports/reports.routes';
 
 export function createApp() {
   const app = express();
@@ -57,6 +60,10 @@ export function createApp() {
   app.use('/api/payments', paymentsRouter);
   app.use('/api/requests', requestsRouter);
   app.use('/api/attachments', attachmentsRouter);
+  app.use('/api/notifications', notificationsRouter);
+  app.use('/api/announcements', announcementsRouter);
+  app.use('/api/dashboard', dashboardRouter);
+  app.use('/api/reports', reportsRouter);
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: { code: 'NOT_FOUND' } });

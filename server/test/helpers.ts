@@ -9,6 +9,10 @@ export const uid = () => `${Date.now().toString(36)}${(n++).toString(36)}`;
 
 export async function resetDb() {
   await prisma.$executeRaw`DELETE FROM "session"`;
+  await prisma.notification.deleteMany();
+  await prisma.announcementRecipient.deleteMany();
+  await prisma.announcementAudience.deleteMany();
+  await prisma.announcement.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.requestUpdate.deleteMany();
   await prisma.maintenanceRequest.deleteMany();

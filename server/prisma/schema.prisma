@@ -62,6 +62,10 @@ model User {
   requestUpdates      RequestUpdate[]      @relation("UpdateAuthor")
   attachmentsUploaded Attachment[]         @relation("AttachmentUploader")
 
+  announcementsPublished Announcement[]          @relation("AnnouncementPublisher")
+  announcementsReceived  AnnouncementRecipient[] @relation("AnnouncementRecipient")
+  notifications          Notification[]          @relation("NotificationRecipient")
+
   @@map("users")
 }
 
@@ -92,10 +96,11 @@ model Unit {
   bedrooms    Int?
   isAvailable Boolean @default(true)
 
-  occupancies Occupancy[]
-  bills       Bill[]
-  fees        UnitFee[]
-  requests    MaintenanceRequest[]
+  occupancies           Occupancy[]
+  bills                 Bill[]
+  fees                  UnitFee[]
+  requests              MaintenanceRequest[]
+  announcementAudiences AnnouncementAudience[]
 
   @@map("units")
 }
@@ -381,4 +386,102 @@ model Attachment {
   @@index([requestId])
   @@index([requestUpdateId])
   @@map("attachments")
+}
+
+// ---------------------------------------------------- announcements & notifications (Sprint 4)
+
+enum AnnouncementCategory {
+  GENERAL
+  MAINTENANCE
+  MEETING
+  SERVICE_INTERRUPTION
+  RULES
+}
+
+enum AudienceType {
+  ALL
+  UNITS
+  FLOORS
+  OWNERS
+  TENANTS
+}
+
+enum NotificationType {
+  ANNOUNCEMENT
+  BILL_NEW
+  BILL_DUE_SOON
+  BILL_OVERDUE
+  PAYMENT_RECORDED
+  REQUEST_NEW
+  REQUEST_UPDATE
+  REQUEST_ASSIGNED
+}
+
+model Announcement {
+  id            String               @id @default(uuid()) @db.Uuid
+  title         String
+  body          String
+  category      AnnouncementCategory @default(GENERAL)
+  /// Important announcements are pinned at the top of residents' pages.
+  isImportant   Boolean              @default(false)
+  audienceType  AudienceType
+  publishedById String               @db.Uuid
+  publishedAt   DateTime             @default(now()) @db.Timestamptz
+  editedAt      DateTime?            @db.Timestamptz
+  /// Archived announcements disappear from residents' pages but stay on record.
+  archivedAt    DateTime?            @db.Timestamptz
+
+  publishedBy User                    @relation("AnnouncementPublisher", fields: [publishedById], references: [id])
+  audience    AnnouncementAudience[]
+  recipients  AnnouncementRecipient[]
+
+  @@index([publishedAt])
+  @@map("announcements")
+}
+
+/// The choices behind an audience: which units, or which floors. (All, owners and tenants need no rows.)
+model AnnouncementAudience {
+  id             String  @id @default(uuid()) @db.Uuid
+  announcementId String  @db.Uuid
+  unitId         String? @db.Uuid
+  floor          Int?
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  unit         Unit?        @relation(fields: [unitId], references: [id])
+
+  @@index([announcementId])
+  @@map("announcement_audience")
+}
+
+/// Who the announcement was sent to, fixed at the moment it was published (FR-24): people who move in later do not get it.
+model AnnouncementRecipient {
+  announcementId String @db.Uuid
+  userId         String @db.Uuid
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation("AnnouncementRecipient", fields: [userId], references: [id])
+
+  @@id([announcementId, userId])
+  @@index([userId])
+  @@map("announcement_recipients")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  type      NotificationType
+  /// The facts the sentence is built from (unit, month, amount, title…). The sentence itself is written in the
+  /// reader's language when shown, so switching language also translates old notifications.
+  params    Json             @default("{}")
+  /// Where clicking it goes, e.g. /bills/…
+  link      String
+  entityId  String?          @db.Uuid
+  readAt    DateTime?        @db.Timestamptz
+  createdAt DateTime         @default(now()) @db.Timestamptz
+
+  user User @relation("NotificationRecipient", fields: [userId], references: [id])
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }

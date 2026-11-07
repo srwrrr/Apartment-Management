@@ -178,3 +178,74 @@ export interface FeeItem {
   amount: number;
   description: string;
 }
+
+// ------------------------------------------------------------------ Sprint 4
+export type NotificationType = 'ANNOUNCEMENT' | 'BILL_NEW' | 'BILL_DUE_SOON' | 'BILL_OVERDUE' | 'PAYMENT_RECORDED' | 'REQUEST_NEW' | 'REQUEST_UPDATE' | 'REQUEST_ASSIGNED';
+export interface NotificationItem {
+  id: string;
+  type: NotificationType;
+  params: Record<string, unknown>;
+  link: string;
+  readAt: string | null;
+  createdAt: string;
+}
+export interface NotificationList extends Page<NotificationItem> {
+  unread: number;
+}
+
+export type AnnouncementCategory = 'GENERAL' | 'MAINTENANCE' | 'MEETING' | 'SERVICE_INTERRUPTION' | 'RULES';
+export interface AnnouncementRow {
+  id: string;
+  title: string;
+  category: AnnouncementCategory;
+  isImportant: boolean;
+  publishedAt: string;
+  editedAt: string | null;
+  author: string;
+  archivedAt?: string | null;
+  preview?: string;
+  read?: boolean | number;
+  recipients?: number;
+}
+export interface AnnouncementDetail extends AnnouncementRow {
+  body: string;
+  read: boolean | number;
+  audience?: { type: 'ALL' | 'OWNERS' | 'TENANTS' | 'FLOORS' | 'UNITS'; units: { id: string; unitNumber: string }[]; floors: number[] };
+}
+
+export interface FinanceMonth {
+  month: string;
+  bills: number;
+  billed: number;
+  collected: number;
+  outstanding: number;
+  rate: number | null;
+}
+export interface FinanceReport {
+  from: string;
+  to: string;
+  billed: number;
+  collected: number;
+  outstanding: number;
+  rate: number | null;
+  openingBalances: { billed: number; collected: number; bills: number; outstanding: number };
+  months: FinanceMonth[];
+  byChargeType: { type: string; billed: number }[];
+  byMethod: { method: string; collected: number }[];
+}
+export interface DuesReport {
+  totalOwed: number;
+  units: { unit: { id: string; unitNumber: string; floor: number }; owed: number; bills: number; overdueBills: number; oldestOverdue: string | null; contact: { name: string; phone: string | null } | null }[];
+}
+export interface DashboardData {
+  month: string;
+  building: { totalUnits: number; occupied: number; vacant: number; unavailable: number; residents: number };
+  billing: { billed: number; collected: number; outstanding: number; rate: number | null; openingBalances: { outstanding: number }; overdueBills: number; overdueAmount: number };
+  maintenance: { pending: number; submitted: number; underReview: number; inProgress: number; resolved: number; overdue: number };
+  trend: { month: string; billed: number; collected: number; rate: number | null }[];
+  recent: {
+    announcements: { id: string; title: string; publishedAt: string; isImportant: boolean }[];
+    payments: { id: string; amount: number; paidOn: string; receiptNo: string; billId: string; unitNumber: string }[];
+    requests: { id: string; number: number; title: string; status: RequestStatus; createdAt: string; unitNumber: string }[];
+  };
+}

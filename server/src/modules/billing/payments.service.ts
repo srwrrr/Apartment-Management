@@ -6,6 +6,7 @@ import { dateOnly, todayDhaka, ymdOf } from '../../lib/dates';
 import type { AuthUser } from '../../types';
 import { canReadAllBills, residentCanSeeBill } from './access';
 import { getBill, lockBill, summaryFor } from './bills.service';
+import { householdOf, notify } from '../notifications/notify';
 
 type Actor = { id: string };
 
@@ -39,6 +40,7 @@ export async function recordPayment(billId: string, input: z.infer<typeof paymen
       INSERT INTO "counters" (kind, year, value) VALUES ('RCPT', ${year}::int, 1)
       ON CONFLICT (kind, year) DO UPDATE SET value = "counters".value + 1
       RETURNING value`;
+    const receiptNo = receiptNumber(year, counter!.value);
     const payment = await tx.payment.create({
       data: {
         billId,
@@ -46,11 +48,24 @@ export async function recordPayment(billId: string, input: z.infer<typeof paymen
         paidOn: dateOnly(input.paidOn),
         method: input.method,
         reference: input.reference ?? null,
-        receiptNo: receiptNumber(year, counter!.value),
+        receiptNo,
         recordedById: actor.id,
       },
       select: { id: true },
     });
+    // FR-25: the household is told that a payment was recorded, in the same transaction as the payment.
+    const bill = await tx.bill.findUniqueOrThrow({
+      where: { id: billId },
+      select: { billingContactId: true, billingMonth: true, kind: true, unit: { select: { unitNumber: true } } },
+    });
+    if (bill.billingContactId) {
+      await notify(tx, await householdOf(tx, [bill.billingContactId]), {
+        type: 'PAYMENT_RECORDED',
+        params: { unit: bill.unit.unitNumber, amount: input.amount, receiptNo, month: ymdOf(bill.billingMonth).slice(0, 7), kind: bill.kind },
+        link: `/bills/${billId}`,
+        entityId: payment.id,
+      });
+    }
     return payment.id;
   });
   return { paymentId, bill: await getBill(billId) };

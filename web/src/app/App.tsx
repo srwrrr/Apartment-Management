@@ -1,6 +1,9 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { BILL_READ_PERMISSIONS } from '@apt/shared';
 import { useTranslation } from 'react-i18next';
+import { AnnouncementDetailPage, AnnouncementsPage, NewAnnouncementPage } from '../features/AnnouncementsPage';
+import { NotificationsPage } from '../features/NotificationsPage';
+import { ReportsPage } from '../features/ReportsPage';
 import { BillDetailPage } from '../features/BillDetailPage';
 import { BillsPage } from '../features/BillsPage';
 import { ChangePasswordPage } from '../features/ChangePasswordPage';
@@ -68,6 +71,11 @@ export function App() {
         <Route path="requests" element={<RequestsPage />} />
         <Route path="requests/new" element={<RequireAccess role="RESIDENT"><NewRequestPage /></RequireAccess>} />
         <Route path="requests/:id" element={<RequestDetailPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="announcements" element={<AnnouncementsPage />} />
+        <Route path="announcements/new" element={<RequireAccess anyOf={['announcements.manage']}><NewAnnouncementPage /></RequireAccess>} />
+        <Route path="announcements/:id" element={<AnnouncementDetailPage />} />
+        <Route path="reports" element={<RequireAccess anyOf={['reports.view']}><ReportsPage /></RequireAccess>} />
         <Route path="fees" element={<RequireAccess anyOf={['billing.manage']}><FeesPage /></RequireAccess>} />
         <Route path="settings" element={<RequireAccess role="ADMIN"><SettingsPage /></RequireAccess>} />
         <Route path="directory" element={<RequireAccess anyOf={['directory.view']}><DirectoryPage /></RequireAccess>} />
