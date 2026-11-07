@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { formatBDT } from '@apt/shared';
@@ -8,6 +8,7 @@ import { api } from '../lib/api';
 import { errorMessage } from '../lib/errors';
 import { formatDate, monthLabel, thisMonth } from '../lib/format';
 import type { DashboardData } from '../lib/types';
+import { ActivityRow } from './ActivityPage';
 
 const pct = (rate: number | null) => (rate === null ? '—' : `${rate}%`);
 
@@ -26,6 +27,8 @@ function Stat({ label, value, id, tone }: { label: string; value: string | numbe
 export function Dashboard() {
   const { t } = useTranslation();
   const [month, setMonth] = useState(thisMonth());
+  const [term, setTerm] = useState('');
+  const navigate = useNavigate();
   const q = useQuery({ queryKey: ['dashboard', month], queryFn: () => api.get<DashboardData>(`/api/dashboard?month=${month}`) });
 
   return (
@@ -36,6 +39,16 @@ export function Dashboard() {
           {t('dashboard.reports')}
         </Link>
       </div>
+      <form
+        className="mb-4 max-w-xl"
+        role="search"
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          if (term.trim()) navigate(`/search?q=${encodeURIComponent(term.trim())}`);
+        }}
+      >
+        <Field label={t('search.label')}>{(p) => <TextInput {...p} type="search" value={term} onChange={(e) => setTerm(e.target.value)} />}</Field>
+      </form>
       <div className="mb-4 max-w-56">
         <Field label={t('dashboard.month')}>{(p) => <TextInput {...p} type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} />}</Field>
       </div>
@@ -106,6 +119,22 @@ export function Dashboard() {
               ))}
             </ul>
           </Card>
+
+          {q.data!.recent.activity && (
+            <Card className="!p-0">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+                <h2 className="text-lg font-bold">{t('activity.recent')}</h2>
+                <Link to="/activity" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+                  {t('activity.seeAll')}
+                </Link>
+              </div>
+              <ul className="divide-y divide-line">
+                {q.data!.recent.activity.map((e) => (
+                  <ActivityRow key={e.id} e={e} />
+                ))}
+              </ul>
+            </Card>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-3">
             <Card>

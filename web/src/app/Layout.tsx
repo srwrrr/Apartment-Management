@@ -34,6 +34,8 @@ export function Layout() {
     { to: '/announcements', label: t('nav.announcements'), show: true },
     { to: '/reports', label: t('nav.reports'), show: can('reports.view') },
     { to: '/expenses', label: t('nav.expenses'), show: can('expenses.manage') },
+    { to: '/search', label: t('nav.search'), show: user?.role !== 'RESIDENT' },
+    { to: '/activity', label: t('nav.activity'), show: user?.role === 'ADMIN' },
     { to: '/building-summary', label: t('nav.buildingSummary'), show: user?.role === 'RESIDENT' && !!building.data?.shareExpenseSummary },
     { to: '/fees', label: t('nav.fees'), show: can('billing.manage') },
     { to: '/directory', label: t('nav.directory'), show: can('directory.view') },
@@ -78,13 +80,14 @@ export function Layout() {
                   </li>
                 ))}
               <li className="sm:ml-auto">
-                <NavLink to="/notifications" className={linkClass} onClick={() => setOpen(false)} aria-label={unread > 0 ? t('notifications.bell', { count: unread }) : t('notifications.bellNone')}>
+                <NavLink to="/notifications" className={linkClass} onClick={() => setOpen(false)}>
                   {t('nav.notifications')}
                   {unread > 0 && (
                     <span data-testid="unread-badge" className="ms-2 inline-block min-w-6 rounded-full bg-danger-600 px-2 text-center text-sm font-bold text-white">
                       {unread > 99 ? '99+' : unread}
                     </span>
                   )}
+                  {unread > 0 && <span className="sr-only"> ({t('notifications.unread')})</span>}
                 </NavLink>
               </li>
               <li>

@@ -263,7 +263,7 @@ test.describe('Sprint 3: maintenance requests', () => {
     const me = await createAdmin('অনুরোধ প্রশাসক');
     await page.goto('/login');
     await page.getByRole('button', { name: 'বাংলা' }).click();
-    await page.getByRole('button', { name: /\(A\+\)/ }).click();
+    await page.getByRole('button', { name: /^A\+/ }).click();
     await page.getByLabel('ইমেইল বা মোবাইল নম্বর').fill(me.id);
     await page.getByLabel('পাসওয়ার্ড', { exact: true }).fill(me.pw);
     await page.getByRole('button', { name: 'লগ ইন করুন' }).click();

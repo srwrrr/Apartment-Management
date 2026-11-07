@@ -26,11 +26,11 @@ export function TextSizeSwitch() {
   const { largeText, setLargeText } = useAuth();
   return (
     <div role="group" aria-label={t('common.textSize')} className="inline-flex">
-      <button type="button" className={seg(!largeText)} aria-pressed={!largeText} onClick={() => setLargeText(false)} aria-label={`${t('common.normalText')} (A)`}>
-        A
+      <button type="button" className={seg(!largeText)} aria-pressed={!largeText} onClick={() => setLargeText(false)}>
+        A <span className="sr-only">({t('common.normalText')})</span>
       </button>
-      <button type="button" className={`${seg(largeText)} text-xl`} aria-pressed={largeText} onClick={() => setLargeText(true)} aria-label={`${t('common.largeText')} (A+)`}>
-        A+
+      <button type="button" className={`${seg(largeText)} text-xl`} aria-pressed={largeText} onClick={() => setLargeText(true)}>
+        A+ <span className="sr-only">({t('common.largeText')})</span>
       </button>
     </div>
   );

@@ -1,6 +1,7 @@
 // FR-42: bulk import of units and residents from a CSV file.
 // Phase 1 checks every row without touching the database, phase 2 checks it against existing data,
 // phase 3 (only when everything is clean, and not a dry run) writes it all in ONE transaction (NFR-14).
+import { logActivity } from '../activity/activity';
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import Papa from 'papaparse';
@@ -233,6 +234,7 @@ async function importUnits(rows: Parsed['rows'], dryRun: boolean, actorId: strin
   );
   try {
     await prisma.$transaction(async (tx) => {
+      await logActivity(tx, 'import.run', { details: { kind: 'units', rows: valid.length } });
       await tx.unit.createMany({
         data: valid.map((u, i) => ({ id: ids[i]!, unitNumber: u.unitNumber, floor: u.floor, sizeSqft: u.sizeSqft, bedrooms: u.bedrooms })),
       });
@@ -336,6 +338,7 @@ async function createResidents(
 
   try {
     await prisma.$transaction(async (tx) => {
+      await logActivity(tx, 'import.run', { details: { kind: 'residents', rows: valid.length } });
       await tx.user.createMany({ data: users });
       await tx.residentProfile.createMany({ data: users.map((u) => ({ userId: u.id! })) });
       if (occupancies.length) await tx.occupancy.createMany({ data: occupancies });

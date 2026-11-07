@@ -200,7 +200,7 @@ export function ExpensesPage() {
           <Card className="!p-0">
             <ul className="divide-y divide-line">
               {q.data!.items.map((e) => (
-                <li key={e.id} className={`px-4 py-3 ${e.voided ? 'opacity-70' : ''}`} data-testid="expense">
+                <li key={e.id} className="px-4 py-3" data-testid="expense">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="min-w-40 flex-1">
                       <span className={`block font-bold ${e.voided ? 'line-through' : ''}`}>

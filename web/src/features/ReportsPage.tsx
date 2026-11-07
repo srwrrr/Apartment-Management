@@ -4,11 +4,11 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { formatBDT } from '@apt/shared';
 import { useAuth } from '../app/auth';
-import { Button, Card, Field, Notice, PageHeader, Spinner, TextInput } from '../components/ui';
+import { Button, Card, Field, Notice, PageHeader, Spinner, TextInput, ScrollTable } from '../components/ui';
 import { api, ApiError } from '../lib/api';
 import { errorMessage, fieldErrorsOf } from '../lib/errors';
 import { formatDate, monthLabel, thisMonth } from '../lib/format';
-import type { Certificate, DuesReport, FinanceReport, IncomeExpenseReport } from '../lib/types';
+import type { Certificate, DuesReport, FinanceReport, IncomeExpenseReport, MaintenanceReport } from '../lib/types';
 
 const pct = (rate: number | null) => (rate === null ? '—' : `${rate}%`);
 
@@ -54,7 +54,7 @@ function Finance() {
         !Object.keys(fe).length && <Notice>{errorMessage(t, q.error)}</Notice>
       ) : (
         <>
-          <div className="overflow-x-auto">
+          <ScrollTable label={t('reports.finance')}>
             <table className="w-full min-w-[34rem] text-start" data-testid="finance-table">
               <thead>
                 <tr className="border-b border-line text-sm text-muted">
@@ -89,7 +89,7 @@ function Finance() {
                 </tr>
               </tfoot>
             </table>
-          </div>
+          </ScrollTable>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <h3 className="font-semibold">{t('reports.byChargeType')}</h3>
@@ -142,7 +142,7 @@ function Dues() {
           <p className="mb-3 text-lg font-bold" data-testid="dues-total">
             {t('reports.totalOwed')}: {formatBDT(q.data!.totalOwed)}
           </p>
-          <div className="overflow-x-auto">
+          <ScrollTable label={t('reports.dues')}>
             <table className="w-full min-w-[34rem]" data-testid="dues-table">
               <thead>
                 <tr className="border-b border-line text-sm text-muted">
@@ -178,7 +178,7 @@ function Dues() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollTable>
         </>
       )}
     </Card>
@@ -196,7 +196,7 @@ function IncomeExpense() {
     <Card className="mt-4">
       <h2 className="mb-1 text-xl font-bold">{t('incomeExpense.title')}</h2>
       <p className="mb-3 text-sm text-muted">{t('incomeExpense.help')}</p>
-      <div className="overflow-x-auto">
+      <ScrollTable label={t('incomeExpense.title')}>
         <table className="w-full min-w-[28rem]" data-testid="income-expense">
           <thead>
             <tr className="border-b border-line text-sm text-muted">
@@ -225,7 +225,7 @@ function IncomeExpense() {
             </tr>
           </tfoot>
         </table>
-      </div>
+      </ScrollTable>
       {r.byCategory.length > 0 && (
         <div className="mt-4 max-w-md">
           <h3 className="font-semibold">{t('incomeExpense.byCategory')}</h3>
@@ -238,6 +238,84 @@ function IncomeExpense() {
             ))}
           </ul>
         </div>
+      )}
+    </Card>
+  );
+}
+
+/** FR-22: for the same period as the reports above. */
+function Maintenance() {
+  const { t } = useTranslation();
+  const { from, to } = usePeriod();
+  const q = useQuery({ queryKey: ['maintenance-report', from, to], queryFn: () => api.get<MaintenanceReport>(`/api/reports/maintenance?from=${from}&to=${to}`), retry: false });
+  if (!q.data) return null;
+  const r = q.data;
+  const hours = (h: number | null) => (h === null ? '—' : t('maintenanceReport.hours', { hours: h }));
+  return (
+    <Card className="mt-4">
+      <h2 className="mb-3 text-xl font-bold">{t('maintenanceReport.title')}</h2>
+      {r.total === 0 ? (
+        <p className="text-muted">{t('maintenanceReport.none')}</p>
+      ) : (
+        <>
+          <dl className="mb-4 grid gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="text-sm text-muted">{t('maintenanceReport.total')}</dt>
+              <dd className="text-2xl font-bold" data-testid="mr-total">{r.total}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted">{t('maintenanceReport.average')}</dt>
+              <dd className="text-2xl font-bold" data-testid="mr-average">{r.averageHours === null ? t('maintenanceReport.noAverage') : hours(r.averageHours)}</dd>
+            </div>
+          </dl>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div>
+              <h3 className="font-semibold">{t('maintenanceReport.byStatus')}</h3>
+              <ul>
+                {r.byStatus.map((s) => (
+                  <li key={s.status} className="flex justify-between border-b border-line py-1">
+                    <span>{t(`requestStatus.${s.status}`)}</span>
+                    <span>{s.n}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold">{t('maintenanceReport.topUnits')}</h3>
+              <ul>
+                {r.topUnits.map((u) => (
+                  <li key={u.id} className="flex justify-between border-b border-line py-1">
+                    <span>{u.unitNumber}</span>
+                    <span>{u.requests}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <h3 className="mt-4 font-semibold">{t('maintenanceReport.byCategory')}</h3>
+          <ScrollTable label={t('maintenanceReport.byCategory')}>
+            <table className="w-full min-w-[26rem]" data-testid="mr-categories">
+              <thead>
+                <tr className="border-b border-line text-sm text-muted">
+                  <th className="py-2 text-start">{t('maintenanceReport.category')}</th>
+                  <th className="py-2 text-end">{t('maintenanceReport.requests')}</th>
+                  <th className="py-2 text-end">{t('maintenanceReport.resolved')}</th>
+                  <th className="py-2 text-end">{t('maintenanceReport.averageShort')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.byCategory.map((c) => (
+                  <tr key={c.category} className="border-b border-line">
+                    <td className="py-2">{t(`requestCategory.${c.category}`)}</td>
+                    <td className="py-2 text-end">{c.requests}</td>
+                    <td className="py-2 text-end">{c.resolved}</td>
+                    <td className="py-2 text-end">{hours(c.averageHours)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </ScrollTable>
+        </>
       )}
     </Card>
   );
@@ -290,6 +368,7 @@ export function ReportsPage() {
       <Finance />
       <Dues />
       <IncomeExpense />
+      <Maintenance />
       {user?.role === 'ADMIN' && <CertificateCheck />}
     </>
   );

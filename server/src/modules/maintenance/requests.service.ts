@@ -8,6 +8,7 @@ import { todayDhaka } from '../../lib/dates';
 import type { AuthUser } from '../../types';
 import { slaHours, getSla, type Sla } from './sla';
 import { householdOf, maintenanceStaff, notify } from '../notifications/notify';
+import { logActivity } from '../activity/activity';
 
 type Tx = Prisma.TransactionClient;
 
@@ -353,6 +354,7 @@ export async function setPriority(id: string, priority: RequestPriority, user: A
     const dueAt = new Date(r.createdAt.getTime() + slaHours(sla, priority) * 3_600_000);
     await tx.maintenanceRequest.update({ where: { id }, data: { priority, dueAt, ...(r.status === 'SUBMITTED' && { status: 'UNDER_REVIEW' }) } });
     await note(tx, { requestId: id, authorId: user.id, kind: 'PRIORITY_CHANGE', fromValue: r.priority, toValue: priority });
+    await logActivity(tx, 'request.priority', { entityType: 'request', entityId: id, details: { from: r.priority, to: priority } });
     if (r.status === 'SUBMITTED') {
       await note(tx, { requestId: id, authorId: user.id, kind: 'STATUS_CHANGE', fromValue: 'SUBMITTED', toValue: 'UNDER_REVIEW' });
       await tellAboutRequest(tx, id, user.id, { status: 'UNDER_REVIEW' });
@@ -375,6 +377,7 @@ export async function assignRequest(id: string, staffId: string, user: AuthUser)
     const previous = r.assignedToId ? await tx.user.findUnique({ where: { id: r.assignedToId }, select: { fullName: true } }) : null;
     await tx.maintenanceRequest.update({ where: { id }, data: { assignedToId: staff.id, ...(r.status === 'SUBMITTED' && { status: 'UNDER_REVIEW' }) } });
     await note(tx, { requestId: id, authorId: user.id, kind: 'ASSIGNMENT', fromValue: previous?.fullName ?? null, toValue: staff.fullName });
+    await logActivity(tx, 'request.assign', { entityType: 'request', entityId: id, details: { from: previous?.fullName ?? null, to: staff.fullName } });
     if (r.status === 'SUBMITTED') await note(tx, { requestId: id, authorId: user.id, kind: 'STATUS_CHANGE', fromValue: 'SUBMITTED', toValue: 'UNDER_REVIEW' });
     // The new person is told it is theirs; the resident is told it is being looked at.
     const f = await facts(tx, id);
@@ -433,6 +436,7 @@ export async function transition(id: string, to: RequestStatus, text: string | u
       },
     });
     await note(tx, { requestId: id, authorId: user.id, kind: 'STATUS_CHANGE', fromValue: r.status, toValue: to, note: text ?? null });
+    await logActivity(tx, 'request.status', { entityType: 'request', entityId: id, details: { from: r.status, to } });
     await tellAboutRequest(tx, id, user.id, { status: to });
   });
   return getRequest(id, user);
@@ -478,6 +482,7 @@ export async function autoCloseResolved(now = new Date()): Promise<number> {
     for (const { id } of due) {
       await tx.maintenanceRequest.update({ where: { id }, data: { status: 'CLOSED', closedAt: now } });
       await note(tx, { requestId: id, authorId: null, kind: 'STATUS_CHANGE', fromValue: 'RESOLVED', toValue: 'CLOSED' });
+      await logActivity(tx, 'request.status', { actorId: null, entityType: 'request', entityId: id, details: { from: 'RESOLVED', to: 'CLOSED', automatic: true } });
       await tellAboutRequest(tx, id, null, { status: 'CLOSED' });
     }
     return due.length;

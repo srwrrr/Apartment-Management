@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { changes, logActivity } from '../activity/activity';
 import { z } from 'zod';
 import type { AnnouncementAudience } from '@apt/shared';
 import { announcementCreateSchema, announcementListQuerySchema, announcementUpdateSchema } from '@apt/shared';
@@ -101,6 +102,7 @@ export async function publish(input: z.infer<typeof announcementCreateSchema>, u
       link: `/announcements/${created.id}`,
       entityId: created.id,
     });
+    await logActivity(tx, 'announcement.publish', { entityType: 'announcement', entityId: created.id, details: { title: input.title, audience: a.type, recipients: recipients.length } });
     return created.id;
   });
   return getForManager(id);
@@ -238,19 +240,27 @@ export async function listAnnouncements(query: z.infer<typeof announcementListQu
 /** FR-23: corrections only. Residents see that it was edited and when; nobody is notified again. */
 export async function updateAnnouncement(id: string, input: z.infer<typeof announcementUpdateSchema>) {
   assertUuid(id);
-  const a = await prisma.announcement.findUnique({ where: { id }, select: { archivedAt: true } });
+  const a = await prisma.announcement.findUnique({ where: { id } });
   if (!a) throw notFound();
   if (a.archivedAt) throw new ApiError(409, 'ANNOUNCEMENT_ARCHIVED');
-  await prisma.announcement.update({ where: { id }, data: { ...input, editedAt: new Date() } });
+  await prisma.$transaction(async (tx) => {
+    await tx.announcement.update({ where: { id }, data: { ...input, editedAt: new Date() } });
+    await logActivity(tx, 'announcement.update', { entityType: 'announcement', entityId: id, details: { title: a.title, changes: changes(a, input) } });
+  });
   return getForManager(id);
 }
 
 /** FR-23: archived announcements leave residents' pages but stay on record. */
 export async function archiveAnnouncement(id: string) {
   assertUuid(id);
-  const a = await prisma.announcement.findUnique({ where: { id }, select: { archivedAt: true } });
+  const a = await prisma.announcement.findUnique({ where: { id }, select: { archivedAt: true, title: true } });
   if (!a) throw notFound();
-  if (!a.archivedAt) await prisma.announcement.update({ where: { id }, data: { archivedAt: new Date() } });
+  if (!a.archivedAt) {
+    await prisma.$transaction(async (tx) => {
+      await tx.announcement.update({ where: { id }, data: { archivedAt: new Date() } });
+      await logActivity(tx, 'announcement.archive', { entityType: 'announcement', entityId: id, details: { title: a.title } });
+    });
+  }
   return getForManager(id);
 }
 

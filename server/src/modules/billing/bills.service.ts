@@ -8,6 +8,7 @@ import { ApiError, assertUuid, forbidden, notFound } from '../../lib/errors';
 import { addMonths, currentMonthDhaka, dateOnly, monthRange, ymdOf } from '../../lib/dates';
 import { getSettings } from '../settings/settings.service';
 import { householdsOf } from '../notifications/notify';
+import { changes, logActivity } from '../activity/activity';
 
 type Tx = Prisma.TransactionClient;
 type Actor = { id: string; role: 'RESIDENT' | 'STAFF' | 'ADMIN' };
@@ -299,6 +300,7 @@ export async function generateBills(input: z.infer<typeof generateBillsSchema>, 
         })),
       );
       if (notices.length) await tx.notification.createMany({ data: notices, skipDuplicates: true });
+      await logActivity(tx, 'bills.generate', { details: { month: input.month, bills: bills.length, total } });
     });
   } catch (e) {
     // Someone else generated the same month a moment ago. Nothing was saved; check the preview again.
@@ -332,16 +334,24 @@ export async function createOneOffBill(input: z.infer<typeof oneOffBillSchema>, 
   }
   const billingContactId = await contactForMonth(input.unitId, input.month);
   try {
-    const bill = await prisma.bill.create({
-      data: {
-        unitId: input.unitId,
-        billingMonth,
-        dueDate,
-        billingContactId,
-        createdById: actor.id,
-        charges: { create: input.charges },
-      },
-      select: { id: true },
+    const bill = await prisma.$transaction(async (tx) => {
+      const b = await tx.bill.create({
+        data: {
+          unitId: input.unitId,
+          billingMonth,
+          dueDate,
+          billingContactId,
+          createdById: actor.id,
+          charges: { create: input.charges },
+        },
+        select: { id: true, unit: { select: { unitNumber: true } } },
+      });
+      await logActivity(tx, 'bill.create', {
+        entityType: 'bill',
+        entityId: b.id,
+        details: { unit: b.unit.unitNumber, month: input.month, total: input.charges.reduce((s, c) => s + c.amount, 0) },
+      });
+      return b;
     });
     return getBill(bill.id);
   } catch (e) {
@@ -360,6 +370,7 @@ export async function addCharge(billId: string, input: z.infer<typeof chargeInpu
       const { kind } = await lockBill(tx, billId);
       if (kind === 'OPENING_BALANCE') throw new ApiError(409, 'OPENING_BALANCE_FIXED'); // it holds one charge only (BR-22)
       await tx.charge.create({ data: { billId, ...input } });
+      await logActivity(tx, 'charge.add', { entityType: 'bill', entityId: billId, details: { type: input.type, amount: input.amount } });
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
@@ -391,6 +402,7 @@ export async function updateCharge(chargeId: string, input: z.infer<typeof charg
       if (s.total - charge.amount + input.amount < s.paid) throw chargeBelowPaid();
     }
     await tx.charge.update({ where: { id: chargeId }, data: input });
+    await logActivity(tx, 'charge.update', { entityType: 'bill', entityId: charge.billId, details: { type: charge.type, changes: changes(charge, input) } });
     return charge.billId;
   });
   return getBill(billId);
@@ -403,6 +415,7 @@ export async function deleteCharge(chargeId: string, actor: Actor) {
     const s = await summaryFor(tx, charge.billId);
     if (s.total - charge.amount < s.paid) throw chargeBelowPaid();
     await tx.charge.delete({ where: { id: chargeId } });
+    await logActivity(tx, 'charge.delete', { entityType: 'bill', entityId: charge.billId, details: { type: charge.type, amount: charge.amount } });
     return charge.billId;
   });
   void actor;
@@ -464,7 +477,11 @@ export async function createOpeningBalance(unitId: string, input: z.infer<typeof
     billingContactId: contact?.residentId ?? null,
   });
   try {
-    await prisma.$transaction([prisma.bill.create({ data: rows.bill }), prisma.charge.create({ data: rows.charge })]);
+    await prisma.$transaction(async (tx) => {
+      await tx.bill.create({ data: rows.bill });
+      await tx.charge.create({ data: rows.charge });
+      await logActivity(tx, 'opening_balance.create', { entityType: 'bill', entityId: rows.bill.id, details: { amount: input.amount } });
+    });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new ApiError(409, 'OPENING_BALANCE_EXISTS');
     throw e;
@@ -481,5 +498,6 @@ export async function deleteOpeningBalance(billId: string) {
     const reports = await tx.paymentReport.count({ where: { billId } });
     if (payments + reports > 0) throw new ApiError(409, 'BILL_HAS_PAYMENTS'); // payments are never deleted (BR-13)
     await tx.bill.delete({ where: { id: billId } });
+    await logActivity(tx, 'opening_balance.delete', { entityType: 'bill', entityId: billId });
   });
 }

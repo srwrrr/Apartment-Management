@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { ADMIN, CASHIER, VIEWER, createAdmin, firstLogin, importTenants, login, noSidewaysScroll, openMenu, unique, type Tenant } from './helpers';
 
@@ -167,6 +168,8 @@ test.describe('Sprint 2: fees, bills, payments, receipts', () => {
     await expect(page.getByTestId('payment')).toHaveCount(2); // never deleted
     await expect(page.getByText('Entered against the wrong unit')).toBeVisible();
     await expect(page.getByText('Void', { exact: true })).toBeVisible();
+    const voidedScan = await new AxeBuilder({ page }).include('[data-testid="payment"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(voidedScan.violations.map((v) => v.id)).toEqual([]); // a voided row stays readable
     await expect(page.getByTestId('bill-paid')).not.toHaveText('৳ 3,500.00');
     await expect(page.getByTestId('bill-balance')).not.toHaveText('৳ 0.00');
     // its receipt still opens, marked void
@@ -305,7 +308,7 @@ test.describe('settings and Bangla', () => {
     const me = await createAdmin('বিল প্রশাসক');
     await page.goto('/login');
     await page.getByRole('button', { name: 'বাংলা' }).click();
-    await page.getByRole('button', { name: /\(A\+\)/ }).click();
+    await page.getByRole('button', { name: /^A\+/ }).click();
     await page.getByLabel('ইমেইল বা মোবাইল নম্বর').fill(me.id);
     await page.getByLabel('পাসওয়ার্ড', { exact: true }).fill(me.pw);
     await page.getByRole('button', { name: 'লগ ইন করুন' }).click();

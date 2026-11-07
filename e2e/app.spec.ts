@@ -301,7 +301,7 @@ test.describe('FR-47 / FR-55 language and text size', () => {
 
     const sizeBefore = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
     await openMenu(page);
-    await page.getByRole('button', { name: /\(A\+\)/ }).click();
+    await page.getByRole('button', { name: /^A\+/ }).click();
     await expect(page.locator('html')).toHaveClass(/text-large/);
     const sizeAfter = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
     expect(sizeAfter).toBeCloseTo(sizeBefore * 1.25, 1);

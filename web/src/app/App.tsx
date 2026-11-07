@@ -8,6 +8,8 @@ import { PaymentReportsPage } from '../features/PaymentReportsPage';
 import { MyStatementPage, UnitStatementPage } from '../features/StatementPage';
 import { MoveOutPage } from '../features/MoveOutPage';
 import { BuildingSummaryPage, ExpensesPage } from '../features/ExpensesPage';
+import { ActivityPage } from '../features/ActivityPage';
+import { SearchPage } from '../features/SearchPage';
 import { BillDetailPage } from '../features/BillDetailPage';
 import { BillsPage } from '../features/BillsPage';
 import { ChangePasswordPage } from '../features/ChangePasswordPage';
@@ -81,6 +83,8 @@ export function App() {
         <Route path="occupancies/:id/move-out" element={<RequireAccess role="ADMIN"><MoveOutPage /></RequireAccess>} />
         <Route path="expenses" element={<RequireAccess anyOf={['expenses.manage']}><ExpensesPage /></RequireAccess>} />
         <Route path="building-summary" element={<RequireAccess role="RESIDENT"><BuildingSummaryPage /></RequireAccess>} />
+        <Route path="activity" element={<RequireAccess role="ADMIN"><ActivityPage /></RequireAccess>} />
+        <Route path="search" element={user?.role === 'RESIDENT' ? <Navigate to="/" replace /> : <SearchPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="announcements" element={<AnnouncementsPage />} />
         <Route path="announcements/new" element={<RequireAccess anyOf={['announcements.manage']}><NewAnnouncementPage /></RequireAccess>} />

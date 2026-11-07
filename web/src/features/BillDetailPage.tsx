@@ -301,7 +301,7 @@ function PaymentsCard({ bill }: { bill: BillDetail }) {
       ) : (
         <ul className="divide-y divide-line">
           {bill.payments.map((p) => (
-            <li key={p.id} className={`py-3 ${p.voided ? 'opacity-70' : ''}`} data-testid="payment">
+            <li key={p.id} className="py-3" data-testid="payment">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="min-w-28 flex-1">
                   <span className={`block font-bold ${p.voided ? 'line-through' : ''}`}>{formatBDT(p.amount)}</span>

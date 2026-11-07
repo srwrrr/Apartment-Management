@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { ADMIN, CASHIER, createAdmin, firstLogin, importTenants, login, logout, noSidewaysScroll, openMenu, unique, type Tenant } from './helpers';
 
@@ -171,6 +172,8 @@ test.describe('Sprint 5: payment reports, statements, certificates, move-out, ex
     await page.getByLabel('Reason').fill('Entered by mistake');
     await page.getByRole('dialog').getByRole('button', { name: 'Void' }).click();
     await expect(wrong).toContainText('Voided');
+    const voidedScan = await new AxeBuilder({ page }).include('[data-testid="expense"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(voidedScan.violations.map((v) => v.id)).toEqual([]); // a voided row stays readable
     await expect(wrong).toContainText('Entered by mistake');
 
     await page.goto('/reports');
@@ -248,6 +251,19 @@ test.describe('Sprint 5: payment reports, statements, certificates, move-out, ex
     await expect(page.getByTestId('dues-table')).toContainText(tenants[1]!.unit);
   });
 
+  test('NFR-12 the detail pages pass the accessibility scan', async ({ page }) => {
+    await login(page, ADMIN);
+    const found: string[] = [];
+    for (const path of [`/bills/${b.billId}`, `/units/${b.unitId}/statement`, `/units/${b.unitId}`]) {
+      await page.goto(path);
+      await expect(page.getByRole('main')).toBeVisible();
+      await page.waitForLoadState('networkidle');
+      const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+      found.push(...violations.map((v) => `${path}: ${v.id} ${v.nodes[0]?.target.join(' ')}`));
+    }
+    expect(found).toEqual([]);
+  });
+
   test('staff without the permissions are refused by address', async ({ page }) => {
     await login(page, { id: 'staff@demo.local', pw: 'Staff1234' });
     for (const path of ['/payment-reports', '/expenses', `/units/${a.unitId}/statement`, `/occupancies/${a.billId}/move-out`]) {
@@ -260,7 +276,7 @@ test.describe('Sprint 5: payment reports, statements, certificates, move-out, ex
     const me = await createAdmin('অর্থ প্রশাসক');
     await page.goto('/login');
     await page.getByRole('button', { name: 'বাংলা' }).click();
-    await page.getByRole('button', { name: /\(A\+\)/ }).click();
+    await page.getByRole('button', { name: /^A\+/ }).click();
     await page.getByLabel('ইমেইল বা মোবাইল নম্বর').fill(me.id);
     await page.getByLabel('পাসওয়ার্ড', { exact: true }).fill(me.pw);
     await page.getByRole('button', { name: 'লগ ইন করুন' }).click();
@@ -296,7 +312,7 @@ test.describe('Sprint 5: payment reports, statements, certificates, move-out, ex
   test('the resident’s Sprint 4 and 5 pages work in Bangla with Large text', async ({ page }) => {
     await page.goto('/login');
     await page.getByRole('button', { name: 'বাংলা' }).click();
-    await page.getByRole('button', { name: /\(A\+\)/ }).click();
+    await page.getByRole('button', { name: /^A\+/ }).click();
     await page.getByLabel('ইমেইল বা মোবাইল নম্বর').fill(tenants[1]!.email);
     await page.getByLabel('পাসওয়ার্ড', { exact: true }).fill(NEW_PASSWORD);
     await page.getByRole('button', { name: 'লগ ইন করুন' }).click();

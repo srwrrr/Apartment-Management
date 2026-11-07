@@ -5,6 +5,7 @@ import { ApiError, assertUuid, notFound } from '../../lib/errors';
 import { dateOnly, todayDhaka, ymdOf } from '../../lib/dates';
 import { issueCertificateIn, unitDues } from '../billing/certificates.service';
 import { notify } from '../notifications/notify';
+import { logActivity } from '../activity/activity';
 import { endAllSessions } from './auth.service';
 import { endOccupancy, mapOccupancyError } from './occupancies.service';
 
@@ -113,6 +114,19 @@ export async function moveOut(id: string, input: z.infer<typeof moveOutSchema>, 
           entityId: id,
         });
       }
+      await logActivity(tx, 'occupancy.move_out', {
+        entityType: 'occupancy',
+        entityId: id,
+        details: {
+          unit: occ.unit.unitNumber,
+          endDate: input.endDate,
+          balance,
+          duesNote: input.duesNote ?? null,
+          newBillingContactOccupancyId: input.newBillingContactOccupancyId ?? null,
+          certificate: certificate?.number ?? null,
+          deactivated: input.deactivateAccount,
+        },
+      });
       return { occupancyId: id, unitId: occ.unitId, certificate, deactivated: input.deactivateAccount };
     });
   } catch (e) {

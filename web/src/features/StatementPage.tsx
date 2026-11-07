@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { formatBDT } from '@apt/shared';
 import { useAuth } from '../app/auth';
-import { Button, Card, Field, Notice, PageHeader, Select, Spinner, TextInput } from '../components/ui';
+import { Button, Card, Field, Notice, PageHeader, Select, Spinner, TextInput, ScrollTable } from '../components/ui';
 import { api } from '../lib/api';
 import { errorMessage, fieldErrorsOf } from '../lib/errors';
 import { formatDate, formatDateTime, monthLabel, todayYmd } from '../lib/format';
@@ -45,7 +45,7 @@ function StatementView({ url, pdfUrl, queryKey }: { url: string; pdfUrl: string;
           {t('statement.downloadPdf')}
         </a>
       </div>
-      <div className="overflow-x-auto">
+      <ScrollTable label={t('statement.title')}>
         <table className="w-full min-w-[34rem]" data-testid="statement">
           <thead>
             <tr className="border-b border-line text-sm text-muted">
@@ -100,7 +100,7 @@ function StatementView({ url, pdfUrl, queryKey }: { url: string; pdfUrl: string;
             </tr>
           </tfoot>
         </table>
-      </div>
+      </ScrollTable>
       {s.rows.length === 0 && <p className="mt-3 text-muted">{t('statement.none')}</p>}
     </Card>
   );

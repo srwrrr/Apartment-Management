@@ -4,6 +4,7 @@ import { occupancyCreateSchema, occupancyUpdateSchema } from '@apt/shared';
 import { prisma } from '../../lib/prisma';
 import { ApiError, assertUuid, notFound } from '../../lib/errors';
 import { dateOnly } from '../../lib/dates';
+import { logActivity } from '../activity/activity';
 
 type Tx = Prisma.TransactionClient;
 const FAR_FUTURE = new Date('9999-12-31T00:00:00Z');
@@ -100,10 +101,16 @@ export async function createOccupancy(unitId: string, input: z.infer<typeof occu
         if (!hasContact) isBillingContact = true; // BR-06: an occupied unit always has a billing contact
       }
 
-      return tx.occupancy.create({
+      const created = await tx.occupancy.create({
         data: { unitId, residentId: resident.id, type: input.type, startDate: start, endDate: end, isBillingContact },
         include: withResident,
       });
+      await logActivity(tx, 'occupancy.create', {
+        entityType: 'occupancy',
+        entityId: created.id,
+        details: { unit: unit.unitNumber, fullName: resident.fullName, type: input.type, startDate: input.startDate },
+      });
+      return created;
     });
   } catch (e) {
     return mapOccupancyError(e);
@@ -132,6 +139,7 @@ export async function updateOccupancy(id: string, input: z.infer<typeof occupanc
         });
         await tx.occupancy.update({ where: { id }, data: { isBillingContact: true } });
       }
+      await logActivity(tx, 'occupancy.update', { entityType: 'occupancy', entityId: id, details: { endDate: input.endDate, isBillingContact: input.isBillingContact } });
     });
   } catch (e) {
     return mapOccupancyError(e);

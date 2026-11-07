@@ -6,6 +6,7 @@ import { todayDhaka, ymdDhaka, ymdOf } from '../../lib/dates';
 import { fontCss } from '../../pdf/fonts';
 import type { AuthUser } from '../../types';
 import { notify } from '../notifications/notify';
+import { logActivity } from '../activity/activity';
 import { dateLabel, esc, monthLabel, strings, type Lang } from './receipt';
 
 type Db = Prisma.TransactionClient | typeof prisma;
@@ -47,6 +48,7 @@ export async function issueCertificateIn(tx: Prisma.TransactionClient, unitId: s
     link: '/statement',
     entityId: cert.id,
   });
+  await logActivity(tx, 'certificate.issue', { entityType: 'unit', entityId: unitId, details: { unit: cert.unit.unitNumber, number: cert.number } });
   return { id: cert.id, number: cert.number };
 }
 

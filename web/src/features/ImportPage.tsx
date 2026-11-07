@@ -1,7 +1,7 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Notice, PageHeader, Spinner } from '../components/ui';
+import { Button, Card, Notice, PageHeader, Spinner, ScrollTable } from '../components/ui';
 import { api, ApiError } from '../lib/api';
 import { errorMessage } from '../lib/errors';
 
@@ -121,7 +121,7 @@ function ImportCard({ kind }: { kind: Kind }) {
           {check && !check.valid && (
             <div className="space-y-3">
               <Notice>{t('import.problems', { count: errors.length })}</Notice>
-              <div className="overflow-x-auto">
+              <ScrollTable label={t('import.problems', { count: errors.length })}>
                 <table className="w-full text-start text-sm">
                   <thead>
                     <tr className="border-b border-line text-start">
@@ -140,7 +140,7 @@ function ImportCard({ kind }: { kind: Kind }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollTable>
               {errors.length > SHOWN_ERRORS && <p className="text-sm text-muted">{t('import.moreProblems', { count: errors.length - SHOWN_ERRORS })}</p>}
             </div>
           )}
@@ -154,7 +154,7 @@ function ImportCard({ kind }: { kind: Kind }) {
             <div className="print-area space-y-3">
               <h3 className="text-lg font-bold">{t('import.credentialsTitle')}</h3>
               <p className="no-print text-sm font-medium text-danger-600">{t('import.credentialsHelp')}</p>
-              <div className="overflow-x-auto">
+              <ScrollTable label={t('import.credentialsTitle')}>
                 <table className="w-full text-sm" data-testid="credentials">
                   <thead>
                     <tr className="border-b border-line">
@@ -175,7 +175,7 @@ function ImportCard({ kind }: { kind: Kind }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollTable>
               <div className="no-print">
                 <Button variant="secondary" onClick={() => window.print()}>
                   {t('import.print')}

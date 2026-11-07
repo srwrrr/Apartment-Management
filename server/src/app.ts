@@ -5,6 +5,9 @@ import { errorHandler } from './lib/errors';
 import { sessionMiddleware } from './middleware/session';
 import { csrfProtection } from './middleware/csrf';
 import { loadUser } from './middleware/auth';
+import { requestContext } from './lib/requestContext';
+import { activityRouter } from './modules/activity/activity.routes';
+import { searchRouter } from './modules/reports/search.routes';
 import { authRouter } from './modules/users/auth.routes';
 import { unitsRouter } from './modules/users/units.routes';
 import { occupanciesRouter, unitOccupanciesRouter } from './modules/users/occupancies.routes';
@@ -38,7 +41,7 @@ export function createApp() {
   });
 
   // Everything below needs a session, CSRF protection on writes, and the current user loaded.
-  app.use('/api', sessionMiddleware, csrfProtection, loadUser);
+  app.use('/api', sessionMiddleware, csrfProtection, loadUser, requestContext);
   app.use('/api/auth', authRouter);
   app.use('/api/me/requests', myRequestsRouter); // a resident's own requests
   app.use('/api/me/tasks', myTasksRouter); // staff: what is assigned to me
@@ -68,6 +71,8 @@ export function createApp() {
   app.use('/api/announcements', announcementsRouter);
   app.use('/api/dashboard', dashboardRouter);
   app.use('/api/reports', reportsRouter);
+  app.use('/api/activity', activityRouter);
+  app.use('/api/search', searchRouter);
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: { code: 'NOT_FOUND' } });

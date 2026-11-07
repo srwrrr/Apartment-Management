@@ -6,6 +6,7 @@ import { ApiError, assertUuid, notFound } from '../../lib/errors';
 import { currentMonthDhaka, dateOnly, monthRange, todayDhaka, ymdOf } from '../../lib/dates';
 import { removeStored, storeDocument } from '../../lib/files';
 import { getSettings } from '../settings/settings.service';
+import { changes, logActivity } from '../activity/activity';
 
 const include = {
   receipt: { select: { id: true } },
@@ -64,6 +65,7 @@ export async function createExpense(input: z.infer<typeof expenseCreateSchema>, 
         select: { id: true },
       });
       if (stored[0]) await tx.attachment.create({ data: { ...stored[0], uploadedById: actor.id, expenseId: e.id } });
+      await logActivity(tx, 'expense.create', { entityType: 'expense', entityId: e.id, details: { category: input.category, amount: input.amount, payee: input.payee } });
       return tx.expense.findUniqueOrThrow({ where: { id: e.id }, include });
     });
     return toDto(row);
@@ -84,6 +86,7 @@ export async function updateExpense(id: string, input: z.infer<typeof expenseUpd
       const locked = await tx.$queryRaw<{ voidedAt: Date | null }[]>`SELECT "voidedAt" FROM "expenses" WHERE id = ${id}::uuid FOR UPDATE`;
       if (locked.length === 0) throw notFound();
       if (locked[0]!.voidedAt) throw new ApiError(409, 'EXPENSE_VOIDED');
+      const before = await tx.expense.findUniqueOrThrow({ where: { id } });
       await tx.expense.update({
         where: { id },
         data: {
@@ -102,6 +105,12 @@ export async function updateExpense(id: string, input: z.infer<typeof expenseUpd
         }
         await tx.attachment.create({ data: { ...stored[0], uploadedById: actor.id, expenseId: id } });
       }
+      const { spentOn: _d, ...plain } = input;
+      await logActivity(tx, 'expense.update', {
+        entityType: 'expense',
+        entityId: id,
+        details: { payee: before.payee, changes: changes(before, plain), receiptReplaced: !!stored[0], ...(input.spentOn && { spentOn: input.spentOn }) },
+      });
       return tx.expense.findUniqueOrThrow({ where: { id }, include });
     });
     if (replaced) await removeStored([replaced]);
@@ -119,7 +128,9 @@ export async function voidExpense(id: string, input: z.infer<typeof expenseVoidS
     const locked = await tx.$queryRaw<{ voidedAt: Date | null }[]>`SELECT "voidedAt" FROM "expenses" WHERE id = ${id}::uuid FOR UPDATE`;
     if (locked.length === 0) throw notFound();
     if (locked[0]!.voidedAt) throw new ApiError(409, 'EXPENSE_VOIDED');
-    return tx.expense.update({ where: { id }, data: { voidedAt: new Date(), voidedById: actor.id, voidReason: input.reason }, include });
+    const voided = await tx.expense.update({ where: { id }, data: { voidedAt: new Date(), voidedById: actor.id, voidReason: input.reason }, include });
+    await logActivity(tx, 'expense.void', { entityType: 'expense', entityId: id, details: { amount: voided.amount, payee: voided.payee, reason: input.reason } });
+    return voided;
   });
   return toDto(row);
 }

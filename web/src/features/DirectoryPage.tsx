@@ -71,10 +71,10 @@ export function DirectoryPage() {
                 <Chip tone="blue">{t(`units.type.${e.type}`)}</Chip>
                 <a
                   href={`tel:${e.resident.phone}`}
-                  aria-label={t('directory.call', { name: e.resident.fullName })}
                   className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline"
                 >
                   {e.resident.phone}
+                  <span className="sr-only"> ({t('directory.call', { name: e.resident.fullName })})</span>
                 </a>
               </li>
             ))}

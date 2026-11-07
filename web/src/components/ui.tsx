@@ -68,6 +68,15 @@ export const TextInput = (props: InputHTMLAttributes<HTMLInputElement>) => <inpu
 export const Select = (props: SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} className={`${inputClass} ${props.className ?? ''}`} />;
 export const TextArea = (props: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea rows={4} {...props} className={`${inputClass} ${props.className ?? ''}`} />;
 
+/** A wide table that scrolls sideways on a phone. It can take focus so keyboard users can scroll it too (NFR-12). */
+export function ScrollTable({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="overflow-x-auto" role="region" aria-label={label} tabIndex={0}>
+      {children}
+    </div>
+  );
+}
+
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <section className={`rounded-xl border border-line bg-surface p-4 shadow-sm sm:p-6 ${className}`}>{children}</section>;
 }

@@ -72,6 +72,7 @@ model User {
   certificatesIssued     NoDuesCertificate[] @relation("CertificateIssuer")
   expensesRecorded       Expense[]           @relation("ExpenseRecorder")
   expensesVoided         Expense[]           @relation("ExpenseVoider")
+  activities             ActivityLog[]       @relation("ActivityActor")
 
   @@map("users")
 }
@@ -596,4 +597,27 @@ model Expense {
   @@index([spentOn])
   @@index([category])
   @@map("expenses")
+}
+
+// ---------------------------------------------------------------- Sprint 6
+
+/// FR-34: who did what, and when. A database trigger refuses any update or delete of these rows.
+model ActivityLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  /// Empty for the system's own jobs and for failed logins, where nobody is known to be logged in.
+  actorId    String?  @db.Uuid
+  action     String
+  entityType String?
+  entityId   String?  @db.Uuid
+  /// The facts of the action. The web app writes the sentence in the reader's language. Never passwords.
+  details    Json     @default("{}")
+  ip         String?
+  createdAt  DateTime @default(now()) @db.Timestamptz
+
+  actor User? @relation("ActivityActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@map("activity_logs")
 }

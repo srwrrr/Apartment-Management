@@ -387,3 +387,64 @@ export const expenseListQuerySchema = z.object({
 
 /** FR-44: what residents may see, when the summary is shared. */
 export const buildingSummaryQuerySchema = z.object({ month: monthSchema.optional() });
+
+// ---------------------------------------------------------------- Sprint 6
+
+/** FR-34: everything the activity log records. Each has a sentence in the language files. */
+export const ACTIVITY_ACTIONS = [
+  'login.success',
+  'login.failed',
+  'password.change',
+  'password.reset',
+  'resident.create',
+  'resident.update',
+  'resident.deactivate',
+  'resident.reactivate',
+  'staff.create',
+  'staff.update',
+  'staff.activate',
+  'staff.deactivate',
+  'staff.permissions',
+  'unit.create',
+  'unit.update',
+  'occupancy.create',
+  'occupancy.update',
+  'occupancy.move_out',
+  'import.run',
+  'fees.update',
+  'bills.generate',
+  'bill.create',
+  'charge.add',
+  'charge.update',
+  'charge.delete',
+  'opening_balance.create',
+  'opening_balance.delete',
+  'payment.record',
+  'payment.void',
+  'payment_report.verify',
+  'payment_report.reject',
+  'expense.create',
+  'expense.update',
+  'expense.void',
+  'certificate.issue',
+  'request.status',
+  'request.assign',
+  'request.priority',
+  'announcement.publish',
+  'announcement.update',
+  'announcement.archive',
+  'settings.update',
+] as const;
+export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number];
+
+export const activityListQuerySchema = z.object({
+  actorId: z.string().uuid().optional(),
+  action: z.enum(ACTIVITY_ACTIONS).optional(),
+  from: ymdSchema.optional(),
+  to: ymdSchema.optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+/** FR-30. */
+export const searchQuerySchema = z.object({ q: z.string().trim().min(2).max(60) });

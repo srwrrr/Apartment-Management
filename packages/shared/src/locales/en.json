@@ -65,7 +65,9 @@
     "paymentReports": "Payment reports",
     "expenses": "Expenses",
     "statement": "Statement",
-    "buildingSummary": "Building spending"
+    "buildingSummary": "Building spending",
+    "activity": "Activity log",
+    "search": "Search"
   },
   "roles": {
     "RESIDENT": "Resident",
@@ -638,8 +640,6 @@
   },
   "notifications": {
     "title": "Notifications",
-    "bell": "Notifications ({{count}} unread)",
-    "bellNone": "Notifications",
     "empty": "You have no notifications.",
     "unreadOnly": "Unread only",
     "markAllRead": "Mark all as read",
@@ -930,5 +930,130 @@
     "total": "Total spent",
     "none": "Nothing was spent this month.",
     "off": "This summary is not being shared."
+  },
+  "search": {
+    "title": "Search",
+    "label": "Search residents, units, bills and requests",
+    "help": "Try a name, a phone number, a unit like 4B, a bill like \"4B November\", or a request number.",
+    "tooShort": "Type at least 2 characters.",
+    "none": "Nothing found.",
+    "residents": "Residents",
+    "units": "Units",
+    "bills": "Bills",
+    "requests": "Requests",
+    "inactive": "Inactive"
+  },
+  "activity": {
+    "title": "Activity log",
+    "help": "Entries cannot be changed or deleted.",
+    "person": "Person",
+    "action": "Action",
+    "everyone": "Everyone",
+    "allActions": "All actions",
+    "from": "From",
+    "to": "To",
+    "system": "The system",
+    "notLoggedIn": "Not logged in",
+    "empty": "Nothing matches these filters.",
+    "recent": "Latest activity",
+    "seeAll": "See the full log",
+    "open": "Open",
+    "actions": {
+      "login": {
+        "success": "Logged in",
+        "failed": "Failed login"
+      },
+      "password": {
+        "change": "Changed their password",
+        "reset": "Reset a password"
+      },
+      "resident": {
+        "create": "Added a resident",
+        "update": "Edited a resident",
+        "deactivate": "Deactivated a resident",
+        "reactivate": "Reactivated a resident"
+      },
+      "staff": {
+        "create": "Added a staff member",
+        "update": "Edited a staff member",
+        "activate": "Activated a staff member",
+        "deactivate": "Deactivated a staff member",
+        "permissions": "Changed staff permissions"
+      },
+      "unit": {
+        "create": "Added a unit",
+        "update": "Edited a unit"
+      },
+      "occupancy": {
+        "create": "Added a stay",
+        "update": "Changed a stay",
+        "move_out": "Completed a move-out"
+      },
+      "import": {
+        "run": "Ran a bulk import"
+      },
+      "fees": {
+        "update": "Changed fees"
+      },
+      "bills": {
+        "generate": "Generated bills"
+      },
+      "bill": {
+        "create": "Created a bill"
+      },
+      "charge": {
+        "add": "Added a charge",
+        "update": "Changed a charge",
+        "delete": "Removed a charge"
+      },
+      "opening_balance": {
+        "create": "Entered an opening balance",
+        "delete": "Removed an opening balance"
+      },
+      "payment": {
+        "record": "Recorded a payment",
+        "void": "Voided a payment"
+      },
+      "payment_report": {
+        "verify": "Verified a payment report",
+        "reject": "Rejected a payment report"
+      },
+      "expense": {
+        "create": "Recorded an expense",
+        "update": "Edited an expense",
+        "void": "Voided an expense"
+      },
+      "certificate": {
+        "issue": "Issued a no-dues certificate"
+      },
+      "request": {
+        "status": "Changed a request’s status",
+        "assign": "Assigned a request",
+        "priority": "Set a request’s priority"
+      },
+      "announcement": {
+        "publish": "Published an announcement",
+        "update": "Edited an announcement",
+        "archive": "Archived an announcement"
+      },
+      "settings": {
+        "update": "Changed settings"
+      }
+    }
+  },
+  "maintenanceReport": {
+    "title": "Maintenance report",
+    "total": "Requests opened",
+    "average": "Average time to resolve",
+    "hours": "{{hours}} hours",
+    "noAverage": "None resolved yet",
+    "byStatus": "By status",
+    "byCategory": "By category",
+    "topUnits": "Units with the most requests",
+    "category": "Category",
+    "requests": "Requests",
+    "resolved": "Resolved",
+    "averageShort": "Average",
+    "none": "No requests in this period."
   }
 }

@@ -1,5 +1,7 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { addMonths, currentMonthDhaka, todayDhaka } from '../../lib/dates';
+import { recentActivity } from '../activity/activity.service';
 
 const num = (v: bigint | number | null | undefined) => Number(v ?? 0);
 /** BR-29: the share of the amount billed that has been paid so far, to one decimal place. Nothing billed means no rate. */
@@ -95,8 +97,46 @@ export async function duesReport() {
   return { totalOwed: units.reduce((s, u) => s + u.owed, 0), units };
 }
 
+/**
+ * FR-22: requests opened in a period of months (Dhaka time). The average covers those that reached Resolved
+ * (AVG skips the rest, whose time is empty).
+ * A reopened request is measured to its latest resolution, which is what the resident actually waited for.
+ */
+export async function maintenanceReport(from: string, to: string) {
+  const start = `${from}-01T00:00:00+06:00`;
+  const end = `${addMonths(to, 1)}-01T00:00:00+06:00`;
+  const period = Prisma.sql`r."createdAt" >= ${start}::timestamptz AND r."createdAt" < ${end}::timestamptz`;
+
+  const [byStatus, byCategory, topUnits] = await Promise.all([
+    prisma.$queryRaw<{ status: string; n: number }[]>`
+      SELECT r.status::text AS status, COUNT(*)::int AS n FROM "maintenance_requests" r WHERE ${period} GROUP BY 1 ORDER BY 1`,
+    prisma.$queryRaw<{ category: string; n: number; resolved: number; hours: number | null }[]>`
+      SELECT r.category::text AS category, COUNT(*)::int AS n, COUNT(r."resolvedAt")::int AS resolved,
+             (AVG(EXTRACT(EPOCH FROM (r."resolvedAt" - r."createdAt"))) / 3600)::float8 AS hours
+      FROM "maintenance_requests" r WHERE ${period} GROUP BY 1 ORDER BY n DESC, 1`,
+    prisma.$queryRaw<{ id: string; unitNumber: string; n: number }[]>`
+      SELECT u.id::text AS id, u."unitNumber", COUNT(*)::int AS n
+      FROM "maintenance_requests" r JOIN "units" u ON u.id = r."unitId" WHERE ${period}
+      GROUP BY u.id ORDER BY n DESC, u."unitNumber" LIMIT 5`,
+  ]);
+  const [overall] = await prisma.$queryRaw<{ hours: number | null }[]>`
+    SELECT (AVG(EXTRACT(EPOCH FROM (r."resolvedAt" - r."createdAt"))) / 3600)::float8 AS hours
+    FROM "maintenance_requests" r WHERE ${period}`;
+
+  const hours = (h: number | null | undefined) => (h === null || h === undefined ? null : Math.round(h * 10) / 10);
+  return {
+    from,
+    to,
+    total: byStatus.reduce((s, r) => s + r.n, 0),
+    byStatus,
+    averageHours: hours(overall?.hours),
+    byCategory: byCategory.map((c) => ({ category: c.category, requests: c.n, resolved: c.resolved, averageHours: hours(c.hours) })),
+    topUnits: topUnits.map((u) => ({ id: u.id, unitNumber: u.unitNumber, requests: u.n })),
+  };
+}
+
 /** FR-27, FR-28, FR-29, FR-58: the administrator's overview. */
-export async function dashboard(month: string = currentMonthDhaka()) {
+export async function dashboard(month: string = currentMonthDhaka(), opts: { activity?: boolean } = {}) {
   const today = todayDhaka();
   const [b] = await prisma.$queryRaw<{ total: number; occupied: number; unavailable: number; residents: number }[]>`
     SELECT (SELECT COUNT(*)::int FROM "units") AS total,
@@ -131,6 +171,9 @@ export async function dashboard(month: string = currentMonthDhaka()) {
     }),
   ]);
 
+  // The activity log is for administrators only (Appendix B), even on a shared dashboard.
+  const activity = opts.activity ? await recentActivity(10) : null;
+
   const m = thisMonth.months[0]!;
   return {
     month,
@@ -155,6 +198,7 @@ export async function dashboard(month: string = currentMonthDhaka()) {
     },
     trend: trend.months.map((t) => ({ month: t.month, billed: t.billed, collected: t.collected, rate: t.rate })),
     recent: {
+      activity,
       announcements: announcements.map((a) => ({ id: a.id, title: a.title, publishedAt: a.publishedAt, isImportant: a.isImportant })),
       payments: payments.map((p) => ({ id: p.id, amount: p.amount, paidOn: p.paidOn.toISOString().slice(0, 10), receiptNo: p.receiptNo, billId: p.billId, unitNumber: p.bill.unit.unitNumber })),
       requests: requests.map((r) => ({ id: r.id, number: r.number, title: r.title, status: r.status, createdAt: r.createdAt, unitNumber: r.unit.unitNumber })),

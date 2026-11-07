@@ -1,4 +1,5 @@
 import type { Prisma, UnitFee } from '@prisma/client';
+import { logActivity } from '../activity/activity';
 import { z } from 'zod';
 import { feeListSchema } from '@apt/shared';
 import { prisma } from '../../lib/prisma';
@@ -41,12 +42,18 @@ async function replace(unitId: string | null, fees: FeeInput, tx: Prisma.Transac
 }
 
 export async function setDefaultFees(fees: FeeInput) {
-  await prisma.$transaction((tx) => replace(null, fees, tx));
+  await prisma.$transaction(async (tx) => {
+    await replace(null, fees, tx);
+    await logActivity(tx, 'fees.update', { details: { scope: 'building', fees } });
+  });
   return getFees();
 }
 
 export async function setUnitFees(unitId: string, fees: FeeInput) {
   await getUnitFees(unitId); // 404 if the unit is unknown
-  await prisma.$transaction((tx) => replace(unitId, fees, tx));
+  await prisma.$transaction(async (tx) => {
+    await replace(unitId, fees, tx);
+    await logActivity(tx, 'fees.update', { entityType: 'unit', entityId: unitId, details: { scope: 'unit', fees } });
+  });
   return getUnitFees(unitId);
 }

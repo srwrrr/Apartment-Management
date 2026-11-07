@@ -247,6 +247,7 @@ export interface DashboardData {
   maintenance: { pending: number; submitted: number; underReview: number; inProgress: number; resolved: number; overdue: number };
   trend: { month: string; billed: number; collected: number; rate: number | null }[];
   recent: {
+    activity: ActivityEntry[] | null;
     announcements: { id: string; title: string; publishedAt: string; isImportant: boolean }[];
     payments: { id: string; amount: number; paidOn: string; receiptNo: string; billId: string; unitNumber: string }[];
     requests: { id: string; number: number; title: string; status: RequestStatus; createdAt: string; unitNumber: string }[];
@@ -363,4 +364,31 @@ export interface BuildingSummary {
   month: string;
   total: number;
   byCategory: { category: string; amount: number }[];
+}
+
+// ------------------------------------------------------------------ Sprint 6
+export interface ActivityEntry {
+  id: string;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  details: Record<string, unknown>;
+  actor: { id: string; fullName: string } | null;
+  ip: string | null;
+  createdAt: string;
+}
+export interface SearchResults {
+  residents: { id: string; fullName: string; phone: string; isActive: boolean }[];
+  units: { id: string; unitNumber: string; floor: number }[];
+  bills: { id: string; unitNumber: string; billingMonth: string; kind: string; balance: number; status: BillStatus }[];
+  requests: { id: string; number: number; title: string; status: RequestStatus; unit: { unitNumber: string } }[];
+}
+export interface MaintenanceReport {
+  from: string;
+  to: string;
+  total: number;
+  byStatus: { status: RequestStatus; n: number }[];
+  averageHours: number | null;
+  byCategory: { category: string; requests: number; resolved: number; averageHours: number | null }[];
+  topUnits: { id: string; unitNumber: string; requests: number }[];
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PERMISSIONS } from './permissions';
+import { ACTIVITY_ACTIONS } from './validation';
 import en from './locales/en.json';
 import bn from './locales/bn.json';
 
@@ -16,6 +17,13 @@ function leaves(obj: unknown, prefix = ''): [string, string][] {
 }
 
 describe('FR-47 translations', () => {
+  it('every activity log action has a sentence', () => {
+    const leaf = (o: unknown, path: string[]) => path.reduce<unknown>((x, k) => (x as Record<string, unknown>)?.[k], o);
+    for (const a of ACTIVITY_ACTIONS) {
+      expect(typeof leaf(en, ['activity', 'actions', ...a.split('.')]), a).toBe('string');
+    }
+  });
+
   it('Bangla has exactly the same keys as English', () => {
     const e = new Set(keys(en));
     const b = new Set(keys(bn));

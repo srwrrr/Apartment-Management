@@ -7,6 +7,7 @@ import { dateOnly, todayDhaka, ymdOf } from '../../lib/dates';
 import { removeStored, storeDocument } from '../../lib/files';
 import type { AuthUser } from '../../types';
 import { notify } from '../notifications/notify';
+import { logActivity } from '../activity/activity';
 import { canReadAllBills, residentCanSeeBill } from './access';
 import { getBill, lockBill, summaryFor } from './bills.service';
 import { recordPaymentIn } from './payments.service';
@@ -166,6 +167,7 @@ export async function verifyReport(id: string, input: z.infer<typeof paymentRepo
       link: `/bills/${r.billId}`,
       entityId: id,
     });
+    await logActivity(tx, 'payment_report.verify', { entityType: 'bill', entityId: r.billId, details: { unit: r.bill.unit.unitNumber, amount, reported: r.amount, reference: r.reference } });
     return { id, status: 'VERIFIED' as const, paymentId };
   });
 }
@@ -181,6 +183,7 @@ export async function rejectReport(id: string, input: z.infer<typeof paymentRepo
       link: `/bills/${r.billId}`,
       entityId: id,
     });
+    await logActivity(tx, 'payment_report.reject', { entityType: 'bill', entityId: r.billId, details: { unit: r.bill.unit.unitNumber, amount: r.amount, reference: r.reference, reason: input.reason } });
     return { id, status: 'REJECTED' as const };
   });
 }

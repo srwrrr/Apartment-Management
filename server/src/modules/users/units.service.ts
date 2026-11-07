@@ -4,6 +4,7 @@ import { unitInputSchema } from '@apt/shared';
 import { prisma } from '../../lib/prisma';
 import { ApiError, notFound } from '../../lib/errors';
 import { dateOnly, todayDhaka } from '../../lib/dates';
+import { changes, logActivity } from '../activity/activity';
 
 export const createUnitSchema = unitInputSchema;
 export const updateUnitSchema = unitInputSchema.partial().extend({ isAvailable: z.boolean().optional() });
@@ -70,7 +71,11 @@ export async function getUnit(id: string) {
 
 export async function createUnit(input: z.infer<typeof createUnitSchema>) {
   try {
-    const unit = await prisma.unit.create({ data: input });
+    const unit = await prisma.$transaction(async (tx) => {
+      const u = await tx.unit.create({ data: input });
+      await logActivity(tx, 'unit.create', { entityType: 'unit', entityId: u.id, details: { unit: u.unitNumber } });
+      return u;
+    });
     return withStatus(unit, 0);
   } catch (e) {
     return mapUniqueError(e);
@@ -78,9 +83,12 @@ export async function createUnit(input: z.infer<typeof createUnitSchema>) {
 }
 
 export async function updateUnit(id: string, input: z.infer<typeof updateUnitSchema>) {
-  await getUnit(id); // 404 if missing
+  const before = await getUnit(id); // 404 if missing
   try {
-    await prisma.unit.update({ where: { id }, data: input });
+    await prisma.$transaction(async (tx) => {
+      await tx.unit.update({ where: { id }, data: input });
+      await logActivity(tx, 'unit.update', { entityType: 'unit', entityId: id, details: { unit: before.unitNumber, changes: changes(before, input) } });
+    });
   } catch (e) {
     mapUniqueError(e);
   }

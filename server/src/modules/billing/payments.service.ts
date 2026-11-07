@@ -8,6 +8,7 @@ import type { AuthUser } from '../../types';
 import { canReadAllBills, residentCanSeeBill } from './access';
 import { getBill, lockBill, summaryFor } from './bills.service';
 import { householdOf, notify } from '../notifications/notify';
+import { logActivity } from '../activity/activity';
 
 type Actor = { id: string };
 
@@ -83,6 +84,11 @@ export async function recordPaymentIn(tx: Prisma.TransactionClient, billId: stri
         entityId: payment.id,
       });
     }
+    await logActivity(tx, 'payment.record', {
+      entityType: 'bill',
+      entityId: billId,
+      details: { unit: bill.unit.unitNumber, amount: input.amount, method: input.method, receiptNo, paymentId: payment.id, fromReport: fromReport?.id ?? null },
+    });
     return payment.id;
 }
 
@@ -95,6 +101,7 @@ export async function voidPayment(paymentId: string, input: z.infer<typeof voidP
     if (rows.length === 0) throw notFound();
     if (rows[0]!.voidedAt) throw new ApiError(409, 'PAYMENT_ALREADY_VOIDED');
     await tx.payment.update({ where: { id: paymentId }, data: { voidedAt: new Date(), voidedById: actor.id, voidReason: input.reason } });
+    await logActivity(tx, 'payment.void', { entityType: 'bill', entityId: rows[0]!.billId, details: { paymentId, reason: input.reason } });
     return rows[0]!.billId;
   });
   return getBill(billId);

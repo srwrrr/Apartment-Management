@@ -6,6 +6,7 @@ import { ApiError, assertUuid, notFound } from '../../lib/errors';
 import { dateOnly } from '../../lib/dates';
 import { endAllSessions } from './auth.service';
 import { activeOccupancyWhere } from './units.service';
+import { changes, logActivity } from '../activity/activity';
 import { endOccupancy } from './occupancies.service';
 import {
   mapLoginIdTaken,
@@ -46,23 +47,27 @@ async function findResident(id: string) {
 export async function createResident(input: z.infer<typeof residentCreateSchema>) {
   const { tempPassword, passwordHash } = await newTempPassword();
   try {
-    const user = await prisma.user.create({
-      data: {
-        loginId: normLogin(input.loginId),
-        passwordHash,
-        role: 'RESIDENT',
-        fullName: input.fullName,
-        phone: normPhone(input.phone),
-        mustChangePassword: true,
-        profile: {
-          create: {
-            altPhone: optionalPhone(input.altPhone),
-            emergencyContactName: input.emergencyContactName || null,
-            emergencyContactPhone: optionalPhone(input.emergencyContactPhone),
+    const user = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          loginId: normLogin(input.loginId),
+          passwordHash,
+          role: 'RESIDENT',
+          fullName: input.fullName,
+          phone: normPhone(input.phone),
+          mustChangePassword: true,
+          profile: {
+            create: {
+              altPhone: optionalPhone(input.altPhone),
+              emergencyContactName: input.emergencyContactName || null,
+              emergencyContactPhone: optionalPhone(input.emergencyContactPhone),
+            },
           },
         },
-      },
-      select: { id: true },
+        select: { id: true },
+      });
+      await logActivity(tx, 'resident.create', { entityType: 'user', entityId: u.id, details: { fullName: input.fullName } });
+      return u;
     });
     return { resident: await findResident(user.id), tempPassword };
   } catch (e) {
@@ -102,21 +107,24 @@ export async function listResidents(input: z.infer<typeof listResidentsSchema>) 
 export const getResident = findResident;
 
 export async function updateResident(id: string, input: z.infer<typeof residentUpdateSchema>) {
-  await findResident(id);
+  const before = await findResident(id);
   const profile: Prisma.ResidentProfileUpdateInput = {};
   if (input.altPhone !== undefined) profile.altPhone = optionalPhone(input.altPhone);
   if (input.emergencyContactName !== undefined) profile.emergencyContactName = input.emergencyContactName || null;
   if (input.emergencyContactPhone !== undefined) profile.emergencyContactPhone = optionalPhone(input.emergencyContactPhone);
 
   try {
-    await prisma.user.update({
-      where: { id },
-      data: {
-        ...(input.fullName !== undefined && { fullName: input.fullName }),
-        ...(input.loginId !== undefined && { loginId: normLogin(input.loginId) }),
-        ...(input.phone !== undefined && { phone: normPhone(input.phone) }),
-        profile: { upsert: { create: { ...profile } as Prisma.ResidentProfileCreateWithoutUserInput, update: profile } },
-      },
+    const fields = {
+      ...(input.fullName !== undefined && { fullName: input.fullName }),
+      ...(input.loginId !== undefined && { loginId: normLogin(input.loginId) }),
+      ...(input.phone !== undefined && { phone: normPhone(input.phone) }),
+    };
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id },
+        data: { ...fields, profile: { upsert: { create: { ...profile } as Prisma.ResidentProfileCreateWithoutUserInput, update: profile } } },
+      });
+      await logActivity(tx, 'resident.update', { entityType: 'user', entityId: id, details: { fullName: before.fullName, changes: changes(before, fields) } });
     });
   } catch (e) {
     mapLoginIdTaken(e);
@@ -140,12 +148,16 @@ export async function deactivateResident(id: string, endDate?: string) {
     }
     await tx.user.update({ where: { id }, data: { isActive: false } });
     await endAllSessions(tx, id);
+    await logActivity(tx, 'resident.deactivate', { entityType: 'user', entityId: id, details: { fullName: resident.fullName, endDate: endDate ?? null } });
   });
   return findResident(id);
 }
 
 export async function reactivateResident(id: string) {
-  await findResident(id);
-  await prisma.user.update({ where: { id }, data: { isActive: true } });
+  const resident = await findResident(id);
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id }, data: { isActive: true } });
+    await logActivity(tx, 'resident.reactivate', { entityType: 'user', entityId: id, details: { fullName: resident.fullName } });
+  });
   return findResident(id);
 }

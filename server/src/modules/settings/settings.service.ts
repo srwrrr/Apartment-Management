@@ -3,6 +3,7 @@ import { settingsUpdateSchema } from '@apt/shared';
 import { prisma } from '../../lib/prisma';
 import { ApiError } from '../../lib/errors';
 import { todayDhaka } from '../../lib/dates';
+import { logActivity } from '../activity/activity';
 
 export interface Settings {
   buildingName: string;
@@ -43,8 +44,9 @@ export async function updateSettings(patch: z.infer<typeof settingsUpdateSchema>
   if (patch.goLiveDate !== undefined) entries.push(['goLiveDate', patch.goLiveDate]);
   if (patch.defaultDueDay !== undefined) entries.push(['defaultDueDay', String(patch.defaultDueDay)]);
   if (patch.shareExpenseSummary !== undefined) entries.push(['shareExpenseSummary', String(patch.shareExpenseSummary)]);
-  await prisma.$transaction(
-    entries.map(([key, value]) => prisma.setting.upsert({ where: { key }, update: { value }, create: { key, value } })),
-  );
+  await prisma.$transaction(async (tx) => {
+    for (const [key, value] of entries) await tx.setting.upsert({ where: { key }, update: { value }, create: { key, value } });
+    await logActivity(tx, 'settings.update', { details: { changed: Object.fromEntries(entries) } });
+  });
   return getSettings();
 }

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { logActivity } from '../activity/activity';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { config } from '../../config';
@@ -53,6 +54,7 @@ authRouter.post(
     await save(req);
     // Tag the session row with the user so FR-31 can end their other sessions.
     await prisma.$executeRaw`UPDATE "session" SET "userId" = ${user.id}::uuid WHERE sid = ${req.sessionID}`;
+    await logActivity(prisma, 'login.success', { actorId: user.id, entityType: 'user', entityId: user.id });
 
     res.json({ csrfToken, mustChangePassword: user.mustChangePassword });
   }),
