@@ -201,3 +201,51 @@ export const billListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
+
+// ---------------------------------------------------------------- maintenance (Sprint 3)
+export const REQUEST_CATEGORIES = ['PLUMBING', 'ELECTRICAL', 'LIFT', 'GENERATOR', 'WATER_SUPPLY', 'GAS', 'CLEANING', 'SECURITY', 'COMMON_AREA', 'OTHER'] as const;
+export const REQUEST_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'] as const;
+export const REQUEST_STATUSES = ['SUBMITTED', 'UNDER_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REJECTED', 'CANCELLED'] as const;
+export type RequestStatus = (typeof REQUEST_STATUSES)[number];
+export type RequestPriority = (typeof REQUEST_PRIORITIES)[number];
+
+/** BR-19: up to 3 photos, each JPG, PNG or WEBP, at most 5 MB. */
+export const MAX_PHOTOS = 3;
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+const uuidOrBlank = z.preprocess(emptyToUndefined, z.string().uuid().optional());
+
+/** FR-16. Sent as form fields along with the photos, so everything arrives as text. */
+export const requestCreateSchema = z.object({
+  category: z.enum(REQUEST_CATEGORIES),
+  location: z.enum(['UNIT', 'COMMON_AREA']),
+  title: z.string().trim().min(5).max(120),
+  description: z.string().trim().min(10).max(2000),
+  unitId: uuidOrBlank,
+});
+
+export const requestPrioritySchema = z.object({ priority: z.enum(REQUEST_PRIORITIES) });
+export const requestAssignSchema = z.object({ staffId: z.string().uuid() });
+export const requestTransitionSchema = z.object({
+  to: z.enum(REQUEST_STATUSES),
+  note: z.preprocess(emptyToUndefined, z.string().trim().min(1).max(1000).optional()),
+});
+export const requestNoteSchema = z.object({
+  note: z.string().trim().min(1).max(1000),
+  isInternal: z.preprocess((v) => v === true || v === 'true', z.boolean()),
+});
+
+export const requestListQuerySchema = z.object({
+  status: z.enum(REQUEST_STATUSES).optional(),
+  category: z.enum(REQUEST_CATEGORIES).optional(),
+  priority: z.enum(REQUEST_PRIORITIES).optional(),
+  unitId: z.string().uuid().optional(),
+  assignedTo: z.union([z.literal('me'), z.literal('none'), z.string().uuid()]).optional(),
+  overdue: z.enum(['true']).optional(),
+  from: ymdSchema.optional(),
+  to: ymdSchema.optional(),
+  q: z.string().trim().max(60).optional(),
+  sort: z.enum(['newest', 'oldest']).default('newest'),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});

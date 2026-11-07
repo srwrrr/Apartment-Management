@@ -14,6 +14,7 @@ import { meRouter } from './modules/users/me.routes';
 import { importRouter } from './modules/users/import.routes';
 import { directoryRouter } from './modules/users/directory.routes';
 import { settingsRouter } from './modules/settings/settings.routes';
+import { attachmentsRouter, myRequestsRouter, myTasksRouter, requestsRouter } from './modules/maintenance/maintenance.routes';
 import { billsRouter, chargesRouter, feesRouter, meBillingRouter, paymentsRouter, unitBillingRouter } from './modules/billing/billing.routes';
 import { preferencesRouter } from './modules/users/preferences.routes';
 
@@ -35,6 +36,8 @@ export function createApp() {
   // Everything below needs a session, CSRF protection on writes, and the current user loaded.
   app.use('/api', sessionMiddleware, csrfProtection, loadUser);
   app.use('/api/auth', authRouter);
+  app.use('/api/me/requests', myRequestsRouter); // a resident's own requests
+  app.use('/api/me/tasks', myTasksRouter); // staff: what is assigned to me
   app.use('/api/me/billing', meBillingRouter); // a resident's own bills (before the generic /api/me)
   app.use('/api/me/preferences', preferencesRouter); // any role; must come before the resident-only /api/me
   app.use('/api/me', meRouter);
@@ -52,6 +55,8 @@ export function createApp() {
   app.use('/api/bills', billsRouter);
   app.use('/api/charges', chargesRouter);
   app.use('/api/payments', paymentsRouter);
+  app.use('/api/requests', requestsRouter);
+  app.use('/api/attachments', attachmentsRouter);
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: { code: 'NOT_FOUND' } });

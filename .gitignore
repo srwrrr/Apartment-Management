@@ -9,3 +9,4 @@ coverage/
 .vite/
 test-results/
 playwright-report/
+server/.test-uploads/

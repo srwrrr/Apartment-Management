@@ -57,6 +57,11 @@ model User {
   paymentsRecorded Payment[]         @relation("PaymentRecorder")
   paymentsVoided   Payment[]         @relation("PaymentVoider")
 
+  requestsSubmitted   MaintenanceRequest[] @relation("RequestSubmitter")
+  requestsAssigned    MaintenanceRequest[] @relation("RequestAssignee")
+  requestUpdates      RequestUpdate[]      @relation("UpdateAuthor")
+  attachmentsUploaded Attachment[]         @relation("AttachmentUploader")
+
   @@map("users")
 }
 
@@ -90,6 +95,7 @@ model Unit {
   occupancies Occupancy[]
   bills       Bill[]
   fees        UnitFee[]
+  requests    MaintenanceRequest[]
 
   @@map("units")
 }
@@ -254,4 +260,125 @@ model Counter {
 
   @@id([kind, year])
   @@map("counters")
+}
+
+// -------------------------------------------------------------- maintenance (Sprint 3)
+
+enum RequestCategory {
+  PLUMBING
+  ELECTRICAL
+  LIFT
+  GENERATOR
+  WATER_SUPPLY
+  GAS
+  CLEANING
+  SECURITY
+  COMMON_AREA
+  OTHER
+}
+
+enum RequestLocation {
+  UNIT
+  COMMON_AREA
+}
+
+enum RequestPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RequestStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  REJECTED
+  CANCELLED
+}
+
+enum UpdateKind {
+  NOTE
+  STATUS_CHANGE
+  PRIORITY_CHANGE
+  ASSIGNMENT
+}
+
+model MaintenanceRequest {
+  id            String           @id @default(uuid()) @db.Uuid
+  /// The human-friendly request number shown as #1024.
+  number        Int              @unique @default(autoincrement())
+  submittedById String           @db.Uuid
+  unitId        String           @db.Uuid
+  location      RequestLocation
+  category      RequestCategory
+  title         String
+  description   String
+  priority      RequestPriority?
+  status        RequestStatus    @default(SUBMITTED)
+  assignedToId  String?          @db.Uuid
+  /// When it should be resolved by (BR-17): from the priority, or the review deadline while unprioritised.
+  dueAt         DateTime         @db.Timestamptz
+  resolvedAt    DateTime?        @db.Timestamptz
+  closedAt      DateTime?        @db.Timestamptz
+  createdAt     DateTime         @default(now()) @db.Timestamptz
+  updatedAt     DateTime         @updatedAt @db.Timestamptz
+
+  submittedBy User            @relation("RequestSubmitter", fields: [submittedById], references: [id])
+  assignedTo  User?           @relation("RequestAssignee", fields: [assignedToId], references: [id])
+  unit        Unit            @relation(fields: [unitId], references: [id])
+  updates     RequestUpdate[]
+  attachments Attachment[]
+
+  @@index([status])
+  @@index([submittedById])
+  @@index([assignedToId])
+  @@index([unitId])
+  @@map("maintenance_requests")
+}
+
+/// The history of a request. Rows are only ever added: each records who did what and when (FR-20).
+model RequestUpdate {
+  id         String     @id @default(uuid()) @db.Uuid
+  /// Order of insertion. Rows written in one transaction share a timestamp, so this is what keeps the history in order.
+  seq        Int        @unique @default(autoincrement())
+  requestId  String     @db.Uuid
+  /// null means the system itself (for example the automatic close).
+  authorId   String?    @db.Uuid
+  kind       UpdateKind
+  fromValue  String?
+  toValue    String?
+  note       String?
+  /// Internal notes are visible to staff only, never to the resident.
+  isInternal Boolean    @default(false)
+  createdAt  DateTime   @default(now()) @db.Timestamptz
+
+  request     MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author      User?              @relation("UpdateAuthor", fields: [authorId], references: [id])
+  attachments Attachment[]
+
+  @@index([requestId])
+  @@map("request_updates")
+}
+
+/// An uploaded photo. The file lives outside the database under a random name; only a reference is stored.
+model Attachment {
+  id              String   @id @default(uuid()) @db.Uuid
+  storedName      String   @unique
+  originalName    String
+  mimeType        String
+  sizeBytes       Int
+  uploadedById    String   @db.Uuid
+  requestId       String?  @db.Uuid
+  requestUpdateId String?  @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz
+
+  uploadedBy    User                @relation("AttachmentUploader", fields: [uploadedById], references: [id])
+  request       MaintenanceRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestUpdate RequestUpdate?      @relation(fields: [requestUpdateId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([requestUpdateId])
+  @@map("attachments")
 }

@@ -9,6 +9,9 @@ export const uid = () => `${Date.now().toString(36)}${(n++).toString(36)}`;
 
 export async function resetDb() {
   await prisma.$executeRaw`DELETE FROM "session"`;
+  await prisma.attachment.deleteMany();
+  await prisma.requestUpdate.deleteMany();
+  await prisma.maintenanceRequest.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.charge.deleteMany();
   await prisma.bill.deleteMany();
@@ -65,6 +68,8 @@ export async function client(app: Express) {
     patch: (url: string, body: object = {}) => agent.patch(url).set('X-CSRF-Token', token).send(body),
     put: (url: string, body: object = {}) => agent.put(url).set('X-CSRF-Token', token).send(body),
     delete: (url: string) => agent.delete(url).set('X-CSRF-Token', token),
+    /** A multipart request (photos). Chain .field(...) and .attach(...). */
+    form: (url: string) => agent.post(url).set('X-CSRF-Token', token),
     async login(loginId: string, password = PASSWORD) {
       const res = await c.post('/api/auth/login', { loginId, password });
       if (res.status === 200) token = res.body.csrfToken;

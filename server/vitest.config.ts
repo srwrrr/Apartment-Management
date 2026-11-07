@@ -12,6 +12,7 @@ export default defineConfig({
       DATABASE_URL: TEST_DB,
       SESSION_SECRET: 'test-secret-test-secret-123456',
       NODE_ENV: 'test',
+      UPLOAD_DIR: './.test-uploads', // photos written by tests; removed afterwards
     },
   },
 });
