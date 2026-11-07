@@ -45,9 +45,9 @@ Shared services used by several modules: `pdf` (receipts, statements, certificat
 | PWA | **vite-plugin-pwa** (Workbox) | Install on home screen, offline page (FR-48). |
 | Backend | **Express** | Simple, widely taught. |
 | Validation | **Zod**, schemas shared via `packages/shared` | One definition of each rule for both sides (NFR-04, NFR-11). |
-| Database | **PostgreSQL 16** + `pg_trgm` extension | Transactions, constraints, partial indexes, fast partial-text search (NFR-14, NFR-18). |
+| Database | **PostgreSQL 16+** (developed on 18) + `pg_trgm`, `btree_gist` extensions | Transactions, constraints, partial indexes, fast partial-text search (NFR-14, NFR-18). |
 | ORM | **Prisma** (+ raw SQL migrations for partial indexes, CHECKs, views) | Typed queries, migrations, `$transaction`. |
-| Auth | `express-session` + `connect-pg-simple`; **bcrypt** (cost 12) | Easy logout, inactivity timeout, "end other sessions" (NFR-03, FR-31). |
+| Auth | `express-session` + `connect-pg-simple`; **bcryptjs** (cost 12; same algorithm as bcrypt, no native build on Windows) | Easy logout, inactivity timeout, "end other sessions" (NFR-03, FR-31). |
 | Security | `helmet`, CSRF double-submit token, `express-rate-limit` | NFR-05, NFR-07. |
 | Uploads | `multer` + `file-type` (checks real content) | BR-19, BR-21, NFR-06. |
 | PDF | **HTML templates → PDF with headless Chromium** (`playwright-core`) | Browsers shape Bangla text correctly; pdfkit does not reliably render Bangla conjuncts. One HTML/CSS skill set for screens and documents. |
@@ -55,7 +55,7 @@ Shared services used by several modules: `pdf` (receipts, statements, certificat
 | Jobs | `node-cron` inside the backend process | §6.8. |
 | API docs | OpenAPI 3 from Zod (`zod-to-openapi`) + Swagger UI at `/api/docs` | NFR-21. |
 | Testing | **Vitest**, **Supertest**, **Playwright** | NFR-22. |
-| Dev DB | PostgreSQL 16 Windows/macOS installer *or* Docker Desktop (free for personal/educational use) | NFR-27. |
+| Dev DB | PostgreSQL 16+ Windows/macOS installer *or* Docker Desktop (free for personal/educational use) | NFR-27. |
 | Collaboration | GitHub (repo, Issues, Projects board, Actions CI) | Free for this use. |
 
 ---
@@ -881,8 +881,8 @@ DEMO_MODE=true
 ```
 
 **First-time setup** (all free)
-1. Install Node 22 LTS and PostgreSQL 16 (or Docker Desktop).
-2. Create the DB user and database (`apt` / `apartment`), or `docker compose up -d`.
+1. Install Node 22+ and PostgreSQL 16+ (or Docker Desktop).
+2. Create the DB user and database: `powershell -ExecutionPolicy Bypass -File scripts/setup-db.ps1` (or `docker compose up -d`). Tests use a separate `apartment_test` database.
 3. Run:
    ```
    npm install

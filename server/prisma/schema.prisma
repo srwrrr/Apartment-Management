@@ -1,0 +1,128 @@
+// Data model v1 (first slice: people & places). See project_spec.md §5.
+// Rules Prisma can't express (case-insensitive unit uniqueness, no-overlap occupancy,
+// one billing contact, CHECKs) are added as raw SQL in the migration files.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  RESIDENT
+  STAFF
+  ADMIN
+}
+
+enum Language {
+  EN
+  BN
+}
+
+enum TextSize {
+  NORMAL
+  LARGE
+}
+
+enum OccupancyType {
+  OWNER
+  TENANT
+}
+
+model User {
+  id                 String   @id @default(uuid()) @db.Uuid
+  loginId            String   @unique
+  passwordHash       String
+  role               Role
+  fullName           String
+  phone              String
+  language           Language @default(EN)
+  textSize           TextSize @default(NORMAL)
+  isActive           Boolean  @default(true)
+  mustChangePassword Boolean  @default(true)
+  failedLoginCount   Int      @default(0)
+  lockedUntil        DateTime? @db.Timestamptz
+  createdAt          DateTime @default(now()) @db.Timestamptz
+  updatedAt          DateTime @updatedAt @db.Timestamptz
+
+  profile       ResidentProfile?
+  permissions   StaffPermission[]
+  occupancies   Occupancy[]
+  householdOf   HouseholdMember[]
+
+  @@map("users")
+}
+
+model ResidentProfile {
+  userId                String  @id @db.Uuid
+  altPhone              String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  user                  User    @relation(fields: [userId], references: [id])
+
+  @@map("resident_profiles")
+}
+
+model StaffPermission {
+  userId     String @db.Uuid
+  permission String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, permission])
+  @@map("staff_permissions")
+}
+
+model Unit {
+  id          String  @id @default(uuid()) @db.Uuid
+  unitNumber  String
+  floor       Int
+  sizeSqft    Int?
+  bedrooms    Int?
+  isAvailable Boolean @default(true)
+
+  occupancies Occupancy[]
+
+  @@map("units")
+}
+
+model Occupancy {
+  id               String        @id @default(uuid()) @db.Uuid
+  unitId           String        @db.Uuid
+  residentId       String        @db.Uuid
+  type             OccupancyType
+  startDate        DateTime      @db.Date
+  endDate          DateTime?     @db.Date
+  isBillingContact Boolean       @default(false)
+
+  unit      Unit              @relation(fields: [unitId], references: [id])
+  resident  User              @relation(fields: [residentId], references: [id])
+  household HouseholdMember[]
+
+  @@index([unitId])
+  @@index([residentId])
+  @@map("occupancies")
+}
+
+model HouseholdMember {
+  id          String    @id @default(uuid()) @db.Uuid
+  occupancyId String    @db.Uuid
+  userId      String    @db.Uuid
+  relation    String
+  addedAt     DateTime  @db.Date
+  removedAt   DateTime? @db.Date
+
+  occupancy Occupancy @relation(fields: [occupancyId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("household_members")
+}
+
+model Setting {
+  key   String @id
+  value String
+
+  @@map("settings")
+}
