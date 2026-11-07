@@ -8,6 +8,7 @@ import { api } from '../lib/api';
 import { errorMessage, fieldErrorsOf } from '../lib/errors';
 import { formatDate, todayYmd, ymd } from '../lib/format';
 import type { Occupancy, Page, ResidentSummary, Unit } from '../lib/types';
+import { OpeningBalanceSection, UnitFeesSection } from './UnitMoneySections';
 import { UnitFormModal, unitStatusTone } from './UnitsPage';
 
 function AssignForm({ unit }: { unit: Unit }) {
@@ -165,7 +166,7 @@ function EndStayModal({ unitId, stay, others, onClose }: { unitId: string; stay:
 export function UnitDetailPage() {
   const { id = '' } = useParams();
   const { t } = useTranslation();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [ending, setEnding] = useState<Occupancy | null>(null);
@@ -257,6 +258,8 @@ export function UnitDetailPage() {
           {makeContact.isError && <div className="mt-3"><Notice>{errorMessage(t, makeContact.error)}</Notice></div>}
         </Card>
       )}
+      {can('billing.manage') && <UnitFeesSection unitId={id} />}
+      {user?.role === 'ADMIN' && <OpeningBalanceSection unitId={id} />}
       {editing && <UnitFormModal unit={u} onClose={() => setEditing(false)} />}
       {ending && <EndStayModal unitId={id} stay={ending} others={current.filter((o) => o.id !== ending.id)} onClose={() => setEnding(null)} />}
     </>

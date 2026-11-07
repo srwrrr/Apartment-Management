@@ -6,7 +6,30 @@ import { Card, Chip, Notice, PageHeader, Spinner } from '../components/ui';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/errors';
 import { formatDate } from '../lib/format';
+import { BILL_READ_PERMISSIONS, formatBDT } from '@apt/shared';
 import type { MyProfile } from '../lib/types';
+
+function BalanceCard() {
+  const { t } = useTranslation();
+  const q = useQuery({ queryKey: ['my-balance'], queryFn: () => api.get<{ outstanding: number; overdueBills: number; openBills: number }>('/api/me/billing/balance') });
+  if (!q.data) return null;
+  return (
+    <Card>
+      {q.data.outstanding > 0 ? (
+        <>
+          <p className="text-muted">{t('billing.youOwe')}</p>
+          <p className="text-3xl font-bold" data-testid="home-outstanding">{formatBDT(q.data.outstanding)}</p>
+          {q.data.overdueBills > 0 && <p className="mt-1 font-semibold text-danger-600">{t('billing.overdueCount', { count: q.data.overdueBills })}</p>}
+        </>
+      ) : (
+        <p className="font-semibold">{t('billing.allPaid')}</p>
+      )}
+      <Link to="/bills" className="mt-2 inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+        {t('billing.viewBills')}
+      </Link>
+    </Card>
+  );
+}
 
 function ResidentHome() {
   const { t } = useTranslation();
@@ -41,6 +64,8 @@ export function HomePage() {
   const shortcuts = [
     { to: '/units', label: t('nav.units'), show: can('units.manage') || can('residents.manage') },
     { to: '/residents', label: t('nav.residents'), show: can('residents.manage') },
+    { to: '/bills', label: t('nav.bills'), show: BILL_READ_PERMISSIONS.some((p) => can(p)) },
+    { to: '/fees', label: t('nav.fees'), show: can('billing.manage') },
     { to: '/directory', label: t('nav.directory'), show: can('directory.view') },
     { to: '/staff', label: t('nav.staff'), show: user.role === 'ADMIN' },
     { to: '/import', label: t('nav.import'), show: user.role === 'ADMIN' },
@@ -52,6 +77,7 @@ export function HomePage() {
       {user.role === 'RESIDENT' ? (
         <div className="space-y-4">
           <p className="text-muted">{t('home.residentIntro')}</p>
+          <BalanceCard />
           <ResidentHome />
           <Link to="/profile" className="inline-block min-h-11 font-semibold text-brand-700 underline">
             {t('nav.profile')}

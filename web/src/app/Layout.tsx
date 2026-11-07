@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { BILL_READ_PERMISSIONS } from '@apt/shared';
+import { api } from '../lib/api';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitch, TextSizeSwitch } from '../components/Preferences';
 import { Button } from '../components/ui';
@@ -10,15 +13,20 @@ export function Layout() {
   const { user, can, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  // The building's name is a setting the administrator can change (shown for everyone who is logged in).
+  const building = useQuery({ queryKey: ['public-settings'], queryFn: () => api.get<{ buildingName: string }>('/api/settings/public'), staleTime: 5 * 60_000 });
 
   // Menus show only what the user is allowed to use (FR-02).
   const links: { to: string; label: string; show: boolean }[] = [
     { to: '/', label: t('nav.home'), show: true },
     { to: '/units', label: t('nav.units'), show: can('units.manage') || can('residents.manage') },
     { to: '/residents', label: t('nav.residents'), show: can('residents.manage') },
+    { to: '/bills', label: t('nav.bills'), show: user?.role === 'RESIDENT' || BILL_READ_PERMISSIONS.some((p) => can(p)) },
+    { to: '/fees', label: t('nav.fees'), show: can('billing.manage') },
     { to: '/directory', label: t('nav.directory'), show: can('directory.view') },
     { to: '/staff', label: t('nav.staff'), show: user?.role === 'ADMIN' },
     { to: '/import', label: t('nav.import'), show: user?.role === 'ADMIN' },
+    { to: '/settings', label: t('nav.settings'), show: user?.role === 'ADMIN' },
     { to: '/profile', label: t('nav.profile'), show: user?.role === 'RESIDENT' },
   ];
 
@@ -33,7 +41,7 @@ export function Layout() {
       <header className="no-print border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div>
-            <p className="text-lg font-bold text-brand-700">{t('app.building')}</p>
+            <p className="text-lg font-bold text-brand-700">{building.data?.buildingName ?? t('app.building')}</p>
             <p className="text-sm text-muted">{t('app.name')}</p>
           </div>
           <Button variant="secondary" className="sm:hidden" aria-expanded={open} aria-controls="site-nav" onClick={() => setOpen((o) => !o)}>

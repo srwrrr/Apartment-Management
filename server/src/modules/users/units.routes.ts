@@ -13,10 +13,10 @@ import {
 
 export const unitsRouter = Router();
 
-// FR-04. Anyone who manages units or residents may look units up (needed to assign residents);
+// FR-04. Anyone who manages units, residents or bills may look units up (needed to assign residents and pick a unit for a bill);
 // only units.manage may change them (Appendix B).
 unitsRouter.use(requireAuth);
-const canRead = requireAnyPermission('units.manage', 'residents.manage');
+const canRead = requireAnyPermission('units.manage', 'residents.manage', 'billing.manage');
 const canWrite = requirePermission('units.manage');
 
 unitsRouter.get('/', canRead, asyncHandler(async (req, res) => res.json(await listUnits(listUnitsSchema.parse(req.query)))));

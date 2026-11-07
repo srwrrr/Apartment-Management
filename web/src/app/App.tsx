@@ -1,6 +1,12 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { BILL_READ_PERMISSIONS } from '@apt/shared';
 import { useTranslation } from 'react-i18next';
+import { BillDetailPage } from '../features/BillDetailPage';
+import { BillsPage } from '../features/BillsPage';
 import { ChangePasswordPage } from '../features/ChangePasswordPage';
+import { FeesPage } from '../features/FeesPage';
+import { GenerateBillsPage } from '../features/GenerateBillsPage';
+import { SettingsPage } from '../features/SettingsPage';
 import { DirectoryPage } from '../features/DirectoryPage';
 import { ImportPage } from '../features/ImportPage';
 import { HomePage } from '../features/HomePage';
@@ -53,6 +59,11 @@ export function App() {
         <Route path="units/:id" element={<RequireAccess anyOf={['units.manage', 'residents.manage']}><UnitDetailPage /></RequireAccess>} />
         <Route path="residents" element={<RequireAccess anyOf={['residents.manage']}><ResidentsPage /></RequireAccess>} />
         <Route path="residents/:id" element={<RequireAccess anyOf={['residents.manage']}><ResidentDetailPage /></RequireAccess>} />
+        <Route path="bills" element={<RequireAccess anyOf={BILL_READ_PERMISSIONS} orRole="RESIDENT"><BillsPage /></RequireAccess>} />
+        <Route path="bills/generate" element={<RequireAccess anyOf={['billing.manage']}><GenerateBillsPage /></RequireAccess>} />
+        <Route path="bills/:id" element={<RequireAccess anyOf={BILL_READ_PERMISSIONS} orRole="RESIDENT"><BillDetailPage /></RequireAccess>} />
+        <Route path="fees" element={<RequireAccess anyOf={['billing.manage']}><FeesPage /></RequireAccess>} />
+        <Route path="settings" element={<RequireAccess role="ADMIN"><SettingsPage /></RequireAccess>} />
         <Route path="directory" element={<RequireAccess anyOf={['directory.view']}><DirectoryPage /></RequireAccess>} />
         <Route path="import" element={<RequireAccess role="ADMIN"><ImportPage /></RequireAccess>} />
         <Route path="staff" element={<RequireAccess role="ADMIN"><StaffPage /></RequireAccess>} />

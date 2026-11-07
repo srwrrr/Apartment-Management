@@ -925,7 +925,7 @@ Status is always recalculated from the rules in BR-09. The diagram shows the com
 | Configure fees, generate bills, edit charges | ✘ | P `billing.manage` | ✔ |
 | Record payments | ✘ | P `payments.record` | ✔ |
 | Void payments | ✘ | ✘ | ✔ |
-| View all bills and finance reports | ✘ | P `billing.view` | ✔ |
+| View all bills and finance reports | ✘ | P `billing.view` (also granted to staff holding `billing.manage` or `payments.record`, who must see bills to do their job) | ✔ |
 | Submit / cancel / reopen maintenance request | Own | ✘ | ✘ |
 | View all maintenance requests | ✘ | P `maintenance.view_all` | ✔ |
 | Review, prioritize, reject requests | ✘ | P `maintenance.review` | ✔ |

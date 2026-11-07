@@ -17,3 +17,21 @@ export function todayYmd(): string {
 
 /** True for an ISO date-time whose date part is today or earlier (a stay that has started). */
 export const ymd = (value: string) => value.slice(0, 10);
+
+/** "November 2026" for a 'YYYY-MM' or 'YYYY-MM-DD', in the reader's language, with Western digits (BR-28). */
+export function monthLabel(value: string): string {
+  const ym = value.slice(0, 7);
+  const date = new Date(`${ym}-01T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return '';
+  const locale = currentLang() === 'bn' ? 'bn-BD-u-nu-latn' : 'en-GB';
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date);
+}
+
+/** 'YYYY-MM' for this month in Dhaka, for <input type="month">. */
+export const thisMonth = (): string => todayYmd().slice(0, 7);
+
+/** Poisha as a plain taka string for an input box: 300000 -> "3000", 250050 -> "2500.50". */
+export function takaString(poisha: number): string {
+  const s = (poisha / 100).toFixed(2);
+  return s.endsWith('.00') ? s.slice(0, -3) : s;
+}

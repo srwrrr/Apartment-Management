@@ -698,14 +698,16 @@ HTTP status codes: `VALIDATION_FAILED` 400, `UNAUTHENTICATED` 401, `FORBIDDEN` /
 | `POST /bills/generate` | `billing.manage` | 09 |
 | `GET /bills?status=&month=&unitId=&kind=` | `billing.view` | 12 |
 | `POST /bills` · `POST /bills/:id/charges` · `PATCH/DELETE /charges/:id` | `billing.manage` | 10 |
-| `GET /bills/:id` | `billing.view` or `unit_access` | 12, 13 |
+| `GET /bills/:id` | staff with `billing.view`, `billing.manage` or `payments.record`; or a resident through `bill_access` (404 otherwise) | 12, 13 |
 | `POST /bills/:id/payments` | `payments.record` | 11 |
 | `POST /payments/:id/void` | admin | 33 |
 | `GET /payments/:id/receipt.pdf` | admin, `billing.view`, or `unit_access` | 14 |
 | `POST /bills/:id/payment-reports` (multipart) | resident with `unit_access` | 39 |
 | `GET /me/payment-reports` | resident | 39 |
 | `GET /payment-reports?status=PENDING` · `POST /payment-reports/:id/verify` · `/reject` | `payments.record` | 40 |
-| `GET /me/bills` · `GET /me/payments` · `GET /me/balance` | resident | 13 |
+| `GET /me/billing/bills` · `GET /me/billing/payments` · `GET /me/billing/balance` | resident | 13 |
+| `GET/PUT /settings` · `GET /settings/public` (building name, any logged-in user) | admin · any | — |
+| `DELETE /bills/:id` (opening balance only, while unpaid) | admin | 41 |
 | `GET /me/statement?unitId=&from=&to=` (+ `.pdf`) | resident | 45 |
 | `GET /units/:id/statement?from=&to=` (+ `.pdf`) | `billing.view` | 45 |
 | `POST /units/:id/certificates` · `GET /certificates?number=` | admin | 46 |

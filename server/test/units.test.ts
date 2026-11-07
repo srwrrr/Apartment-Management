@@ -148,3 +148,17 @@ describe('FR-04 manage apartment units', () => {
     expect((await c.patch('/api/units/00000000-0000-0000-0000-000000000000', { floor: 1 })).status).toBe(404);
   });
 });
+
+describe('billing.manage may look units up (to pick one for a bill) but not change them', () => {
+  it('can list and view, cannot create or edit; other billing permissions cannot even list', async () => {
+    const { c } = await as('STAFF', ['billing.manage']);
+    const unit = await makeUnit('8B', 8);
+    expect((await c.get('/api/units')).status).toBe(200);
+    expect((await c.get(`/api/units/${unit.id}`)).status).toBe(200);
+    expect((await c.post('/api/units', { unitNumber: 'X2', floor: 1 })).status).toBe(403);
+    expect((await c.patch(`/api/units/${unit.id}`, { floor: 2 })).status).toBe(403);
+    for (const perm of ['billing.view', 'payments.record']) {
+      expect((await (await as('STAFF', [perm])).c.get('/api/units')).status, perm).toBe(403);
+    }
+  });
+});

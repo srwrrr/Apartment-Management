@@ -33,8 +33,9 @@ export function AccessDenied() {
  * Hides pages the user may not use. This is a convenience only: the server checks every request (NFR-02),
  * so typing the address of a page never gives access to its data (FR-02).
  */
-export function RequireAccess({ children, anyOf, role }: { children: ReactNode; anyOf?: Permission[]; role?: Role }) {
+export function RequireAccess({ children, anyOf, role, orRole }: { children: ReactNode; anyOf?: Permission[]; role?: Role; orRole?: Role }) {
   const { user, can } = useAuth();
-  const allowed = (!role || user?.role === role) && (!anyOf || anyOf.some((p) => can(p)));
+  // orRole: a whole role may also enter (e.g. residents on the bills pages, alongside billing staff).
+  const allowed = (!!orRole && user?.role === orRole) || ((!role || user?.role === role) && (!anyOf || anyOf.some((p) => can(p))));
   return allowed ? <>{children}</> : <AccessDenied />;
 }
