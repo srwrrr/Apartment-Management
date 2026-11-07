@@ -1,5 +1,10 @@
-import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+// The .env file lives at the repo root, not inside server/.
+dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.env') });
 
 const schema = z.object({
   DATABASE_URL: z.string().url(),
@@ -7,7 +12,7 @@ const schema = z.object({
   PORT: z.coerce.number().default(4000),
   UPLOAD_DIR: z.string().default('./uploads'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  DEMO_MODE: z.coerce.boolean().default(false),
+  DEMO_MODE: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -22,3 +27,6 @@ if (config.NODE_ENV === 'production' && config.SESSION_SECRET.startsWith('change
   console.error('Refusing to start in production with the default SESSION_SECRET.');
   process.exit(1);
 }
+
+/** bcrypt cost: 12 in real use (NFR-01), 4 in tests so they stay fast. */
+export const BCRYPT_COST = config.NODE_ENV === 'test' ? 4 : 12;

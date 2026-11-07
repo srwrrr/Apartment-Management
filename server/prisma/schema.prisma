@@ -126,3 +126,16 @@ model Setting {
 
   @@map("settings")
 }
+
+// Managed by connect-pg-simple (express sessions). userId lets us end a user's
+// other sessions after a password change (FR-31).
+model Session {
+  sid    String   @id
+  sess   Json
+  expire DateTime @db.Timestamp(6)
+  userId String?  @db.Uuid
+
+  @@index([expire])
+  @@index([userId])
+  @@map("session")
+}

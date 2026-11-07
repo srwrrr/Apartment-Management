@@ -2,8 +2,12 @@ import { afterAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app';
 import { prisma } from '../src/lib/prisma';
+import { pool } from '../src/lib/pool';
 
-afterAll(() => prisma.$disconnect());
+afterAll(async () => {
+  await prisma.$disconnect();
+  await pool.end();
+});
 
 describe('health', () => {
   it('reports ok when the database is reachable', async () => {
