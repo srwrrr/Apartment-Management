@@ -33,25 +33,29 @@ enum OccupancyType {
 }
 
 model User {
-  id                 String   @id @default(uuid()) @db.Uuid
-  loginId            String   @unique
+  id                 String    @id @default(uuid()) @db.Uuid
+  loginId            String    @unique
   passwordHash       String
   role               Role
   fullName           String
   phone              String
-  language           Language @default(EN)
-  textSize           TextSize @default(NORMAL)
-  isActive           Boolean  @default(true)
-  mustChangePassword Boolean  @default(true)
-  failedLoginCount   Int      @default(0)
+  language           Language  @default(EN)
+  textSize           TextSize  @default(NORMAL)
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(true)
+  failedLoginCount   Int       @default(0)
   lockedUntil        DateTime? @db.Timestamptz
-  createdAt          DateTime @default(now()) @db.Timestamptz
-  updatedAt          DateTime @updatedAt @db.Timestamptz
+  createdAt          DateTime  @default(now()) @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @db.Timestamptz
 
-  profile       ResidentProfile?
-  permissions   StaffPermission[]
-  occupancies   Occupancy[]
-  householdOf   HouseholdMember[]
+  profile          ResidentProfile?
+  permissions      StaffPermission[]
+  occupancies      Occupancy[]
+  householdOf      HouseholdMember[]
+  billsAsContact   Bill[]            @relation("BillingContact")
+  billsCreated     Bill[]            @relation("BillCreator")
+  paymentsRecorded Payment[]         @relation("PaymentRecorder")
+  paymentsVoided   Payment[]         @relation("PaymentVoider")
 
   @@map("users")
 }
@@ -84,6 +88,8 @@ model Unit {
   isAvailable Boolean @default(true)
 
   occupancies Occupancy[]
+  bills       Bill[]
+  fees        UnitFee[]
 
   @@map("units")
 }
@@ -138,4 +144,114 @@ model Session {
   @@index([expire])
   @@index([userId])
   @@map("session")
+}
+
+// ---------------------------------------------------------------- billing (Sprint 2)
+// Money is integer poisha (1 BDT = 100 poisha). A bill's total / paid / balance / status are never stored:
+// they are computed by the bill_summary view so they can never drift out of sync (SRS BR-09).
+
+enum BillKind {
+  REGULAR
+  OPENING_BALANCE
+}
+
+enum ChargeType {
+  SERVICE
+  RENT
+  WATER
+  GAS
+  ELECTRICITY
+  OPENING_BALANCE
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  BANK
+  BKASH
+  NAGAD
+  ROCKET
+  OTHER
+}
+
+/// Recurring charges applied when bills are generated. unitId null = the building-wide default.
+model UnitFee {
+  id          String     @id @default(uuid()) @db.Uuid
+  unitId      String?    @db.Uuid
+  chargeType  ChargeType
+  amount      Int
+  description String
+
+  unit Unit? @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId])
+  @@map("unit_fees")
+}
+
+model Bill {
+  id               String   @id @default(uuid()) @db.Uuid
+  unitId           String   @db.Uuid
+  kind             BillKind @default(REGULAR)
+  billingMonth     DateTime @db.Date
+  dueDate          DateTime @db.Date
+  billingContactId String?  @db.Uuid
+  note             String?
+  createdById      String   @db.Uuid
+  createdAt        DateTime @default(now()) @db.Timestamptz
+
+  unit           Unit      @relation(fields: [unitId], references: [id])
+  billingContact User?     @relation("BillingContact", fields: [billingContactId], references: [id])
+  createdBy      User      @relation("BillCreator", fields: [createdById], references: [id])
+  charges        Charge[]
+  payments       Payment[]
+
+  @@unique([unitId, billingMonth])
+  @@index([billingMonth])
+  @@map("bills")
+}
+
+model Charge {
+  id          String     @id @default(uuid()) @db.Uuid
+  billId      String     @db.Uuid
+  type        ChargeType
+  amount      Int
+  description String
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([billId])
+  @@map("charges")
+}
+
+model Payment {
+  id           String        @id @default(uuid()) @db.Uuid
+  billId       String        @db.Uuid
+  amount       Int
+  paidOn       DateTime      @db.Date
+  method       PaymentMethod
+  reference    String?
+  receiptNo    String        @unique
+  recordedById String        @db.Uuid
+  voidedAt     DateTime?     @db.Timestamptz
+  voidedById   String?       @db.Uuid
+  voidReason   String?
+  createdAt    DateTime      @default(now()) @db.Timestamptz
+
+  bill       Bill  @relation(fields: [billId], references: [id])
+  recordedBy User  @relation("PaymentRecorder", fields: [recordedById], references: [id])
+  voidedBy   User? @relation("PaymentVoider", fields: [voidedById], references: [id])
+
+  @@index([billId])
+  @@index([method, reference])
+  @@map("payments")
+}
+
+/// Yearly counters for receipt numbers (RCPT-YYYY-NNNNN) and certificates later. Incremented under a row lock.
+model Counter {
+  kind  String
+  year  Int
+  value Int
+
+  @@id([kind, year])
+  @@map("counters")
 }

@@ -38,7 +38,7 @@ describe('FR-42 access', () => {
     expect(units.status).toBe(200);
     expect(units.headers['content-type']).toMatch(/text\/csv/);
     expect(units.headers['content-disposition']).toMatch(/attachment/);
-    expect(units.text).toBe('﻿unit_number,floor,size_sqft,bedrooms\r\n');
+    expect(units.text).toBe('﻿unit_number,floor,size_sqft,bedrooms,opening_balance\r\n');
     expect((await c.get('/api/import/templates/residents.csv')).text).toContain('full_name,login_id,phone,unit_number,type,start_date,billing_contact');
     expect((await c.get('/api/import/templates/other.csv')).status).toBe(404);
     expect((await run(c, 'nothing' as 'units', UNITS)).status).toBe(404);

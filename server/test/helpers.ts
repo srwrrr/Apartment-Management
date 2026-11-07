@@ -9,6 +9,12 @@ export const uid = () => `${Date.now().toString(36)}${(n++).toString(36)}`;
 
 export async function resetDb() {
   await prisma.$executeRaw`DELETE FROM "session"`;
+  await prisma.payment.deleteMany();
+  await prisma.charge.deleteMany();
+  await prisma.bill.deleteMany();
+  await prisma.unitFee.deleteMany();
+  await prisma.counter.deleteMany();
+  await prisma.setting.deleteMany();
   await prisma.householdMember.deleteMany();
   await prisma.occupancy.deleteMany();
   await prisma.staffPermission.deleteMany();
@@ -58,6 +64,7 @@ export async function client(app: Express) {
     post: (url: string, body: object = {}) => agent.post(url).set('X-CSRF-Token', token).send(body),
     patch: (url: string, body: object = {}) => agent.patch(url).set('X-CSRF-Token', token).send(body),
     put: (url: string, body: object = {}) => agent.put(url).set('X-CSRF-Token', token).send(body),
+    delete: (url: string) => agent.delete(url).set('X-CSRF-Token', token),
     async login(loginId: string, password = PASSWORD) {
       const res = await c.post('/api/auth/login', { loginId, password });
       if (res.status === 200) token = res.body.csrfToken;
@@ -74,4 +81,49 @@ export async function loginAs(app: Express, role: Role, permissions: string[] = 
   const res = await c.login(user.loginId);
   if (res.status !== 200) throw new Error('test login failed: ' + res.status);
   return { c, user };
+}
+
+// ---------------------------------------------------------------- billing helpers
+export { addMonths, currentMonthDhaka, todayDhaka } from '../src/lib/dates';
+
+/** A unit with a resident living in it (creating the unit if needed). */
+export async function occupy(
+  unitNumber: string,
+  o: { floor?: number; name?: string; type?: 'OWNER' | 'TENANT'; start?: string; end?: string | null; contact?: boolean } = {},
+) {
+  const unit = (await prisma.unit.findFirst({ where: { unitNumber } })) ?? (await prisma.unit.create({ data: { unitNumber, floor: o.floor ?? 1 } }));
+  const resident = await makeLoginUser('RESIDENT', [], { fullName: o.name ?? `Resident ${unitNumber}` });
+  const occupancy = await prisma.occupancy.create({
+    data: {
+      unitId: unit.id,
+      residentId: resident.id,
+      type: o.type ?? 'TENANT',
+      startDate: d(o.start ?? '2020-01-01'),
+      endDate: o.end ? d(o.end) : null,
+      isBillingContact: o.contact ?? true,
+    },
+  });
+  return { unit, resident, occupancy };
+}
+
+/** Building-wide fees, in poisha: setFees({ SERVICE: 300000, WATER: 50000 }). */
+export async function setFees(fees: Partial<Record<'SERVICE' | 'RENT' | 'WATER' | 'GAS' | 'ELECTRICITY', number>>, unitId: string | null = null) {
+  await prisma.unitFee.createMany({
+    data: Object.entries(fees).map(([chargeType, amount]) => ({ unitId, chargeType: chargeType as 'SERVICE', amount: amount!, description: chargeType })),
+  });
+}
+
+/** A bill straight in the database, for tests that are not about generating bills. */
+export async function makeBill(unitId: string, month: string, charges: [string, number][], over: { dueDate?: string; contactId?: string | null; createdById?: string } = {}) {
+  const creator = over.createdById ?? (await makeLoginUser('ADMIN')).id;
+  return prisma.bill.create({
+    data: {
+      unitId,
+      billingMonth: d(`${month}-01`),
+      dueDate: d(over.dueDate ?? `${month}-10`),
+      billingContactId: over.contactId ?? null,
+      createdById: creator,
+      charges: { create: charges.map(([type, amount]) => ({ type: type as 'SERVICE', amount, description: type })) },
+    },
+  });
 }

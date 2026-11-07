@@ -29,7 +29,7 @@ importRouter.post(
   asyncHandler(async (req, res) => {
     const kind = kindOf(String(req.params.kind));
     const { csv } = bodySchema.parse(req.body);
-    const result = await runImport(kind, csv, req.query.dryRun === 'true');
+    const result = await runImport(kind, csv, req.query.dryRun === 'true', req.user!.id);
     // A file with problems is a normal, expected outcome of checking it: 200 with the list of problems.
     // Only a real import of an invalid file is refused.
     if (!result.valid && req.query.dryRun !== 'true') {

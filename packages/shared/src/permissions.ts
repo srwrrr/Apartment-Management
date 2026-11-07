@@ -25,3 +25,6 @@ export function hasPermission(
 ): boolean {
   return user.role === 'ADMIN' || (user.role === 'STAFF' && user.permissions.includes(permission));
 }
+
+/** Staff who need to see bills to do their job: viewing, editing or recording payments (SRS Appendix B). */
+export const BILL_READ_PERMISSIONS: Permission[] = ['billing.view', 'billing.manage', 'payments.record'];

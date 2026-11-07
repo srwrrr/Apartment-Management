@@ -5,7 +5,8 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import Papa from 'papaparse';
 import { Prisma } from '@prisma/client';
-import { normalizeLoginId, normalizePhone, ymdSchema } from '@apt/shared';
+import { MAX_POISHA, normalizeLoginId, normalizePhone, parseTaka, ymdSchema } from '@apt/shared';
+import { openingBalanceMonth, openingBalanceRows } from '../billing/bills.service';
 import { prisma } from '../../lib/prisma';
 import { ApiError } from '../../lib/errors';
 import { dateOnly } from '../../lib/dates';
@@ -23,7 +24,7 @@ export const MAX_ROWS: Record<ImportKind, number> = { units: 2000, residents: 20
 export const MAX_CSV_CHARS = 700_000;
 
 const COLUMNS: Record<ImportKind, string[]> = {
-  units: ['unit_number', 'floor', 'size_sqft', 'bedrooms'],
+  units: ['unit_number', 'floor', 'size_sqft', 'bedrooms', 'opening_balance'],
   residents: ['full_name', 'login_id', 'phone', 'unit_number', 'type', 'start_date', 'billing_contact'],
 };
 const REQUIRED: Record<ImportKind, string[]> = {
@@ -79,6 +80,7 @@ interface UnitRow {
   floor: number;
   sizeSqft: number | null;
   bedrooms: number | null;
+  openingBalance: number | null; // poisha (FR-41)
 }
 
 function validateUnits(rows: Parsed['rows']) {
@@ -102,8 +104,17 @@ function validateUnits(rows: Parsed['rows']) {
     const beds = v.bedrooms ?? '';
     if (beds && !intIn(beds, 0, 20)) errors.push({ line, field: 'bedrooms', code: 'BEDROOMS_INVALID' });
 
+    // Dues from before the system was used, in taka (FR-41). Empty means nothing owed.
+    const ob = v.opening_balance ?? '';
+    let openingBalance: number | null = null;
+    if (ob) {
+      const poisha = parseTaka(ob);
+      if (poisha === null || poisha <= 0 || poisha > MAX_POISHA) errors.push({ line, field: 'opening_balance', code: 'OPENING_BALANCE_INVALID' });
+      else openingBalance = poisha;
+    }
+
     if (errors.length === before) {
-      valid.push({ line, unitNumber: un, floor: +floor, sizeSqft: size ? +size : null, bedrooms: beds ? +beds : null });
+      valid.push({ line, unitNumber: un, floor: +floor, sizeSqft: size ? +size : null, bedrooms: beds ? +beds : null, openingBalance });
     }
   }
   return { errors, valid };
@@ -202,7 +213,7 @@ export interface ImportResult {
 
 const sortErrors = (e: ImportError[]) => e.sort((a, b) => a.line - b.line);
 
-async function importUnits(rows: Parsed['rows'], dryRun: boolean): Promise<ImportResult> {
+async function importUnits(rows: Parsed['rows'], dryRun: boolean, actorId: string): Promise<ImportResult> {
   const { errors, valid } = validateUnits(rows);
   if (valid.length > 0) {
     // Phase 2: unit numbers that already exist (BR-04, case-insensitive).
@@ -213,9 +224,22 @@ async function importUnits(rows: Parsed['rows'], dryRun: boolean): Promise<Impor
   }
   if (errors.length || dryRun) return { valid: errors.length === 0, rows: rows.length, errors: sortErrors(errors) };
 
+  // Units and their opening balances go in together: all or nothing.
+  const ids = valid.map(() => crypto.randomUUID());
+  const withBalance = valid.map((u, i) => ({ u, id: ids[i]! })).filter((x) => x.u.openingBalance !== null);
+  const { month, goLive } = await openingBalanceMonth();
+  const balances = withBalance.map(({ u, id }) =>
+    openingBalanceRows({ unitId: id, amount: u.openingBalance!, month, dueDate: dateOnly(goLive), actorId, billingContactId: null }),
+  );
   try {
-    await prisma.unit.createMany({
-      data: valid.map((u) => ({ unitNumber: u.unitNumber, floor: u.floor, sizeSqft: u.sizeSqft, bedrooms: u.bedrooms })),
+    await prisma.$transaction(async (tx) => {
+      await tx.unit.createMany({
+        data: valid.map((u, i) => ({ id: ids[i]!, unitNumber: u.unitNumber, floor: u.floor, sizeSqft: u.sizeSqft, bedrooms: u.bedrooms })),
+      });
+      if (balances.length) {
+        await tx.bill.createMany({ data: balances.map((b) => b.bill) });
+        await tx.charge.createMany({ data: balances.map((b) => b.charge) });
+      }
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new ApiError(409, 'IMPORT_CONFLICT');
@@ -323,8 +347,8 @@ async function createResidents(
   return { valid: true, rows: totalRows, errors: [], created: valid.length, credentials };
 }
 
-export async function runImport(kind: ImportKind, csv: string, dryRun: boolean): Promise<ImportResult> {
+export async function runImport(kind: ImportKind, csv: string, dryRun: boolean, actorId: string): Promise<ImportResult> {
   const parsed = parse(kind, csv);
   if (parsed.errors.length) return { valid: false, rows: parsed.rows.length, errors: parsed.errors };
-  return kind === 'units' ? importUnits(parsed.rows, dryRun) : importResidents(parsed.rows, dryRun);
+  return kind === 'units' ? importUnits(parsed.rows, dryRun, actorId) : importResidents(parsed.rows, dryRun);
 }
