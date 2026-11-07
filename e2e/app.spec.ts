@@ -284,10 +284,10 @@ test.describe('FR-47 / FR-55 language and text size', () => {
 
     await page.goto('/login');
     await page.getByRole('button', { name: 'বাংলা' }).click();
-    await expect(page.getByRole('heading', { name: 'লগ ইন' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'লগ ইন', exact: true })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute('lang', 'bn');
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'লগ ইন' })).toBeVisible(); // remembered
+    await expect(page.getByRole('heading', { name: 'লগ ইন', exact: true })).toBeVisible(); // remembered
 
     await page.getByLabel('ইমেইল বা মোবাইল নম্বর').fill(me.id);
     await page.getByLabel('পাসওয়ার্ড', { exact: true }).fill('WrongPass1');

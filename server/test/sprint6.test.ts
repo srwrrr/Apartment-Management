@@ -336,8 +336,8 @@ describe('FR-22 maintenance report', () => {
     expect(res.body.byStatus).toEqual(expect.arrayContaining([{ status: 'RESOLVED', n: 3 }, { status: 'SUBMITTED', n: 1 }]));
     expect(res.body.averageHours).toBe(5); // (2 + 4 + 9) / 3
     expect(res.body.byCategory).toEqual([
-      { category: 'PLUMBING', requests: 2, resolved: 2, averageHours: 3 },
-      { category: 'ELECTRICAL', requests: 2, resolved: 1, averageHours: 9 },
+      { category: 'PLUMBING', requests: 2, resolved: 2, averageHours: 3, averageRating: null },
+      { category: 'ELECTRICAL', requests: 2, resolved: 1, averageHours: 9, averageRating: null },
     ].sort((a, b) => a.category.localeCompare(b.category)));
     expect(res.body.topUnits.map((u: { unitNumber: string; requests: number }) => [u.unitNumber, u.requests])).toEqual([['1A', 3], ['2A', 1]]);
   });

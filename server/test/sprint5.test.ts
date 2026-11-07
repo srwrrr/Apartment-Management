@@ -551,9 +551,9 @@ describe('FR-56 move-out wizard', () => {
     expect((await r.c.get('/api/auth/me')).status).toBe(401); // logged out everywhere
     expect((await r.c.login(r.resident.loginId)).status).not.toBe(200);
     expect((await a.c.get(`/api/units/${r.unit.id}`)).body.status).toBe('VACANT');
-    // The household member stops seeing bills from months after they left, but keeps those from their time there (BR-08).
+    // Ending the stay stops the household member's access too (FR-54): their session goes with it.
     const later = await makeBill(r.unit.id, addMonths(MONTH, 1), [['SERVICE', 100]], { createdById: a.user.id });
-    expect((await memberC.get(`/api/bills/${later.id}`)).status).toBe(404);
+    expect((await memberC.get(`/api/bills/${later.id}`)).status).toBe(401);
   });
 
   it('with dues unpaid it needs a note, keeps it, and the dues stay on the unit', async () => {

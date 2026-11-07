@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { hasPermission, announcementAudienceSchema, announcementCreateSchema, announcementListQuerySchema, announcementUpdateSchema } from '@apt/shared';
 import { asyncHandler } from '../../lib/errors';
 import { requireAuth, requirePermission, requireRole } from '../../middleware/auth';
-import { archiveAnnouncement, getAnnouncement, listAnnouncements, markAnnouncementRead, previewAudience, publish, readStatus, updateAnnouncement } from './announcements.service';
+import { archiveAnnouncement, getAnnouncement, getForNotice, listAnnouncements, markAnnouncementRead, noticeHtml, previewAudience, publish, readStatus, updateAnnouncement } from './announcements.service';
+import { getSettings } from '../settings/settings.service';
+import { renderPdf } from '../../pdf/render';
 
 export const announcementsRouter = Router();
 announcementsRouter.use(requireAuth);
@@ -27,6 +29,21 @@ announcementsRouter.get(
   asyncHandler(async (req, res) => res.json(await listAnnouncements(announcementListQuerySchema.parse(req.query), req.user!, canManage(req.user!)))),
 );
 announcementsRouter.get('/:id', asyncHandler(async (req, res) => res.json(await getAnnouncement(id(req.params.id), req.user!, canManage(req.user!)))));
+
+// FR-53.
+announcementsRouter.get(
+  '/:id/notice.pdf',
+  manage,
+  asyncHandler(async (req, res) => {
+    const a = await getForNotice(id(req.params.id));
+    const { buildingName } = await getSettings();
+    const pdf = await renderPdf(noticeHtml(a, buildingName, req.user!.language));
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="notice.pdf"');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.send(pdf);
+  }),
+);
 
 announcementsRouter.patch('/:id', manage, asyncHandler(async (req, res) => res.json(await updateAnnouncement(id(req.params.id), announcementUpdateSchema.parse(req.body)))));
 announcementsRouter.post('/:id/archive', manage, asyncHandler(async (req, res) => res.json(await archiveAnnouncement(id(req.params.id)))));

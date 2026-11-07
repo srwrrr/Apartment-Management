@@ -13,6 +13,8 @@ const schema = z.object({
   UPLOAD_DIR: z.string().default('./uploads'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DEMO_MODE: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  /** Serve the built web app from this server, so one process and one port run everything. */
+  SERVE_WEB: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
 });
 
 const parsed = schema.safeParse(process.env);

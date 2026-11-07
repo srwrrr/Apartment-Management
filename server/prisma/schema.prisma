@@ -66,13 +66,17 @@ model User {
   announcementsReceived  AnnouncementRecipient[] @relation("AnnouncementRecipient")
   notifications          Notification[]          @relation("NotificationRecipient")
 
-  paymentReportsMade     PaymentReport[]     @relation("PaymentReporter")
-  paymentReportsReviewed PaymentReport[]     @relation("PaymentReviewer")
-  certificatesReceived   NoDuesCertificate[] @relation("CertificateResident")
-  certificatesIssued     NoDuesCertificate[] @relation("CertificateIssuer")
-  expensesRecorded       Expense[]           @relation("ExpenseRecorder")
-  expensesVoided         Expense[]           @relation("ExpenseVoider")
-  activities             ActivityLog[]       @relation("ActivityActor")
+  paymentReportsMade     PaymentReport[]       @relation("PaymentReporter")
+  paymentReportsReviewed PaymentReport[]       @relation("PaymentReviewer")
+  certificatesReceived   NoDuesCertificate[]   @relation("CertificateResident")
+  certificatesIssued     NoDuesCertificate[]   @relation("CertificateIssuer")
+  expensesRecorded       Expense[]             @relation("ExpenseRecorder")
+  expensesVoided         Expense[]             @relation("ExpenseVoider")
+  activities             ActivityLog[]         @relation("ActivityActor")
+  requestRatings         RequestRating[]       @relation("RequestRater")
+  scheduledTasksCreated  ScheduledTask[]       @relation("ScheduledTaskCreator")
+  scheduledTasksAssigned ScheduledTask[]       @relation("ScheduledTaskAssignee")
+  residentGroups         ResidentGroupMember[]
 
   @@map("users")
 }
@@ -221,9 +225,9 @@ model Bill {
   createdById      String   @db.Uuid
   createdAt        DateTime @default(now()) @db.Timestamptz
 
-  unit           Unit      @relation(fields: [unitId], references: [id])
-  billingContact User?     @relation("BillingContact", fields: [billingContactId], references: [id])
-  createdBy      User      @relation("BillCreator", fields: [createdById], references: [id])
+  unit           Unit            @relation(fields: [unitId], references: [id])
+  billingContact User?           @relation("BillingContact", fields: [billingContactId], references: [id])
+  createdBy      User            @relation("BillCreator", fields: [createdById], references: [id])
   charges        Charge[]
   payments       Payment[]
   paymentReports PaymentReport[]
@@ -260,9 +264,9 @@ model Payment {
   voidReason   String?
   createdAt    DateTime      @default(now()) @db.Timestamptz
 
-  bill       Bill  @relation(fields: [billId], references: [id])
-  recordedBy User  @relation("PaymentRecorder", fields: [recordedById], references: [id])
-  voidedBy   User? @relation("PaymentVoider", fields: [voidedById], references: [id])
+  bill       Bill           @relation(fields: [billId], references: [id])
+  recordedBy User           @relation("PaymentRecorder", fields: [recordedById], references: [id])
+  voidedBy   User?          @relation("PaymentVoider", fields: [voidedById], references: [id])
   report     PaymentReport?
 
   @@index([billId])
@@ -324,36 +328,78 @@ enum UpdateKind {
 }
 
 model MaintenanceRequest {
-  id            String           @id @default(uuid()) @db.Uuid
+  id              String           @id @default(uuid()) @db.Uuid
   /// The human-friendly request number shown as #1024.
-  number        Int              @unique @default(autoincrement())
-  submittedById String           @db.Uuid
-  unitId        String           @db.Uuid
-  location      RequestLocation
-  category      RequestCategory
-  title         String
-  description   String
-  priority      RequestPriority?
-  status        RequestStatus    @default(SUBMITTED)
-  assignedToId  String?          @db.Uuid
+  number          Int              @unique @default(autoincrement())
+  /// Empty for a job the system created from a scheduled task (BR-25).
+  submittedById   String?          @db.Uuid
+  /// Empty for a job in the common areas that no unit reported.
+  unitId          String?          @db.Uuid
+  scheduledTaskId String?          @db.Uuid
+  location        RequestLocation
+  category        RequestCategory
+  title           String
+  description     String
+  priority        RequestPriority?
+  status          RequestStatus    @default(SUBMITTED)
+  assignedToId    String?          @db.Uuid
   /// When it should be resolved by (BR-17): from the priority, or the review deadline while unprioritised.
-  dueAt         DateTime         @db.Timestamptz
-  resolvedAt    DateTime?        @db.Timestamptz
-  closedAt      DateTime?        @db.Timestamptz
-  createdAt     DateTime         @default(now()) @db.Timestamptz
-  updatedAt     DateTime         @updatedAt @db.Timestamptz
+  dueAt           DateTime         @db.Timestamptz
+  resolvedAt      DateTime?        @db.Timestamptz
+  closedAt        DateTime?        @db.Timestamptz
+  createdAt       DateTime         @default(now()) @db.Timestamptz
+  updatedAt       DateTime         @updatedAt @db.Timestamptz
 
-  submittedBy User            @relation("RequestSubmitter", fields: [submittedById], references: [id])
-  assignedTo  User?           @relation("RequestAssignee", fields: [assignedToId], references: [id])
-  unit        Unit            @relation(fields: [unitId], references: [id])
-  updates     RequestUpdate[]
-  attachments Attachment[]
+  submittedBy   User?           @relation("RequestSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  assignedTo    User?           @relation("RequestAssignee", fields: [assignedToId], references: [id])
+  unit          Unit?           @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  updates       RequestUpdate[]
+  attachments   Attachment[]
+  rating        RequestRating?
+  scheduledTask ScheduledTask?  @relation(fields: [scheduledTaskId], references: [id])
 
+  /// A task can only create one request for each due date, however often the job runs.
+  @@unique([scheduledTaskId, dueAt])
   @@index([status])
   @@index([submittedById])
   @@index([assignedToId])
   @@index([unitId])
   @@map("maintenance_requests")
+}
+
+/// BR-26: one rating for a request, which cannot be changed afterwards.
+model RequestRating {
+  requestId String   @id @db.Uuid
+  stars     Int
+  comment   String?
+  ratedById String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  request MaintenanceRequest @relation(fields: [requestId], references: [id])
+  ratedBy User               @relation("RequestRater", fields: [ratedById], references: [id])
+
+  @@map("request_ratings")
+}
+
+/// BR-25: routine upkeep that repeats, such as servicing the lift each month.
+model ScheduledTask {
+  id                String          @id @default(uuid()) @db.Uuid
+  title             String
+  description       String
+  category          RequestCategory
+  intervalMonths    Int
+  nextDueDate       DateTime        @db.Date
+  defaultAssigneeId String?         @db.Uuid
+  isPaused          Boolean         @default(false)
+  createdById       String          @db.Uuid
+  createdAt         DateTime        @default(now()) @db.Timestamptz
+
+  defaultAssignee User?                @relation("ScheduledTaskAssignee", fields: [defaultAssigneeId], references: [id])
+  createdBy       User                 @relation("ScheduledTaskCreator", fields: [createdById], references: [id])
+  requests        MaintenanceRequest[]
+
+  @@index([nextDueDate])
+  @@map("scheduled_tasks")
 }
 
 /// The history of a request. Rows are only ever added: each records who did what and when (FR-20).
@@ -421,6 +467,7 @@ enum AudienceType {
   FLOORS
   OWNERS
   TENANTS
+  GROUP
 }
 
 enum NotificationType {
@@ -432,6 +479,7 @@ enum NotificationType {
   REQUEST_NEW
   REQUEST_UPDATE
   REQUEST_ASSIGNED
+  REQUEST_SCHEDULED
   PAYMENT_REPORT_NEW
   PAYMENT_REPORT_VERIFIED
   PAYMENT_REPORT_REJECTED
@@ -440,24 +488,30 @@ enum NotificationType {
 }
 
 model Announcement {
-  id            String               @id @default(uuid()) @db.Uuid
-  title         String
-  body          String
-  category      AnnouncementCategory @default(GENERAL)
+  id                   String               @id @default(uuid()) @db.Uuid
+  title                String
+  body                 String
+  category             AnnouncementCategory @default(GENERAL)
   /// Important announcements are pinned at the top of residents' pages.
-  isImportant   Boolean              @default(false)
-  audienceType  AudienceType
-  publishedById String               @db.Uuid
-  publishedAt   DateTime             @default(now()) @db.Timestamptz
-  editedAt      DateTime?            @db.Timestamptz
+  isImportant          Boolean              @default(false)
+  audienceType         AudienceType
+  publishedById        String               @db.Uuid
+  /// When it goes out. This can be in the future (FR-51).
+  publishedAt          DateTime             @default(now()) @db.Timestamptz
+  /// After this it moves to residents' past announcements (FR-51).
+  endsAt               DateTime?            @db.Timestamptz
+  /// Set once the audience is fixed and everyone is told. Empty means it has not gone out yet.
+  recipientsResolvedAt DateTime?            @db.Timestamptz
+  editedAt             DateTime?            @db.Timestamptz
   /// Archived announcements disappear from residents' pages but stay on record.
-  archivedAt    DateTime?            @db.Timestamptz
+  archivedAt           DateTime?            @db.Timestamptz
 
   publishedBy User                    @relation("AnnouncementPublisher", fields: [publishedById], references: [id])
   audience    AnnouncementAudience[]
   recipients  AnnouncementRecipient[]
 
   @@index([publishedAt])
+  @@index([recipientsResolvedAt])
   @@map("announcements")
 }
 
@@ -467,12 +521,53 @@ model AnnouncementAudience {
   announcementId String  @db.Uuid
   unitId         String? @db.Uuid
   floor          Int?
+  groupId        String? @db.Uuid
+  /// Kept so the record still reads correctly after the group is deleted (FR-36).
+  groupName      String?
 
-  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  unit         Unit?        @relation(fields: [unitId], references: [id])
+  announcement Announcement   @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  unit         Unit?          @relation(fields: [unitId], references: [id])
+  group        ResidentGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   @@index([announcementId])
   @@map("announcement_audience")
+}
+
+/// FR-36: a named set of residents to send announcements to.
+model ResidentGroup {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  members   ResidentGroupMember[]
+  audiences AnnouncementAudience[]
+
+  @@map("resident_groups")
+}
+
+model ResidentGroupMember {
+  groupId String @db.Uuid
+  userId  String @db.Uuid
+
+  group ResidentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id])
+
+  @@id([groupId, userId])
+  @@index([userId])
+  @@map("resident_group_members")
+}
+
+/// FR-52: important phone numbers. Not private, so this is the one thing the app keeps for offline use.
+model EmergencyContact {
+  id        String @id @default(uuid()) @db.Uuid
+  name      String
+  role      String
+  phone     String
+  hours     String
+  sortOrder Int
+
+  @@index([sortOrder])
+  @@map("emergency_contacts")
 }
 
 /// Who the announcement was sent to, fixed at the moment it was published (FR-24): people who move in later do not get it.

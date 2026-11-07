@@ -253,17 +253,21 @@ export const requestListQuerySchema = z.object({
 
 // ------------------------------------------------ announcements, notifications, reports (Sprint 4)
 export const ANNOUNCEMENT_CATEGORIES = ['GENERAL', 'MAINTENANCE', 'MEETING', 'SERVICE_INTERRUPTION', 'RULES'] as const;
-export const AUDIENCE_TYPES = ['ALL', 'UNITS', 'FLOORS', 'OWNERS', 'TENANTS'] as const;
+export const AUDIENCE_TYPES = ['ALL', 'UNITS', 'FLOORS', 'OWNERS', 'TENANTS', 'GROUP'] as const;
 
 /** FR-24: who an announcement is for. */
 export const announcementAudienceSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ALL') }),
   z.object({ type: z.literal('OWNERS') }),
   z.object({ type: z.literal('TENANTS') }),
+  z.object({ type: z.literal('GROUP'), groupId: z.string().uuid() }),
   z.object({ type: z.literal('UNITS'), unitIds: z.array(z.string().uuid()).min(1).max(200) }),
   z.object({ type: z.literal('FLOORS'), floors: z.array(z.number().int().min(-2).max(100)).min(1).max(103) }),
 ]);
 export type AnnouncementAudience = z.infer<typeof announcementAudienceSchema>;
+
+/** A moment in time, with its offset, such as 2026-11-08T09:00:00.000Z. */
+const moment = z.preprocess(emptyToUndefined, z.string().datetime({ offset: true }).optional());
 
 /** FR-23. */
 export const announcementCreateSchema = z.object({
@@ -272,6 +276,13 @@ export const announcementCreateSchema = z.object({
   category: z.enum(ANNOUNCEMENT_CATEGORIES).default('GENERAL'),
   isImportant: z.boolean().default(false),
   audience: announcementAudienceSchema,
+  /** FR-51: go out later. Left empty, or in the past, it goes out now. */
+  publishAt: moment.optional(),
+  /** FR-51: after this it moves to residents' past announcements. */
+  endsAt: moment.optional(),
+}).superRefine((v, ctx) => {
+  const start = v.publishAt ? Date.parse(v.publishAt) : Date.now();
+  if (v.endsAt && Date.parse(v.endsAt) <= start) ctx.addIssue({ code: 'custom', path: ['endsAt'], message: 'ENDS_BEFORE_PUBLISH' });
 });
 /** An announcement can be corrected afterwards, but not re-addressed: the people it reached stay as they were. */
 export const announcementUpdateSchema = z
@@ -280,11 +291,16 @@ export const announcementUpdateSchema = z
     body: z.string().trim().min(1).max(5000).optional(),
     category: z.enum(ANNOUNCEMENT_CATEGORIES).optional(),
     isImportant: z.boolean().optional(),
+    /** Only before it has gone out. */
+    publishAt: z.string().datetime({ offset: true }).optional(),
+    endsAt: z.string().datetime({ offset: true }).nullable().optional(),
   })
   .strict()
   .refine((v) => Object.keys(v).length > 0, 'NOTHING_TO_UPDATE');
 export const announcementListQuerySchema = z.object({
   archived: z.enum(['true', 'false', 'all']).default('false'),
+  /** FR-51: announcements whose end time has passed. */
+  past: z.enum(['true', 'false']).default('false'),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
@@ -433,6 +449,20 @@ export const ACTIVITY_ACTIONS = [
   'announcement.publish',
   'announcement.update',
   'announcement.archive',
+  'announcement.schedule',
+  'group.create',
+  'group.update',
+  'group.delete',
+  'group.members',
+  'emergency_contacts.update',
+  'household.add',
+  'household.remove',
+  'request.rate',
+  'request.scheduled',
+  'scheduled_task.create',
+  'scheduled_task.update',
+  'scheduled_task.pause',
+  'scheduled_task.resume',
   'settings.update',
 ] as const;
 export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number];
@@ -448,3 +478,56 @@ export const activityListQuerySchema = z.object({
 
 /** FR-30. */
 export const searchQuerySchema = z.object({ q: z.string().trim().min(2).max(60) });
+
+// ------------------------------------------------------- Could items (Sprint 7)
+
+/** FR-54: a family member with their own login. */
+export const householdMemberCreateSchema = z.object({
+  fullName: z.string().trim().min(2).max(100),
+  relation: z.string().trim().min(2).max(40),
+  loginId: loginIdSchema,
+  phone: z.preprocess(emptyToUndefined, phoneSchema.optional()),
+});
+
+/** BR-26. */
+export const requestRatingSchema = z.object({
+  stars: z.number().int().min(1).max(5),
+  comment: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
+});
+
+/** BR-25. */
+const scheduledTaskFields = {
+  title: z.string().trim().min(5).max(120),
+  description: z.string().trim().min(10).max(2000),
+  category: z.enum(REQUEST_CATEGORIES),
+  intervalMonths: z.number().int().min(1).max(24),
+  nextDueDate: ymdSchema,
+  defaultAssigneeId: z.string().uuid().nullish(),
+};
+export const scheduledTaskCreateSchema = z.object(scheduledTaskFields);
+export const scheduledTaskUpdateSchema = z
+  .object(scheduledTaskFields)
+  .partial()
+  .strict()
+  .refine((v) => Object.keys(v).length > 0, 'NOTHING_TO_UPDATE');
+
+/** FR-36. */
+export const groupInputSchema = z.object({ name: z.string().trim().min(2).max(60) });
+export const groupMembersSchema = z.object({ userIds: z.array(z.string().uuid()).max(1000) });
+
+/** FR-52. Numbers such as 999 are allowed here, so this is not a mobile number check. */
+export const emergencyContactsSchema = z.object({
+  contacts: z
+    .array(
+      z.object({
+        name: z.string().trim().min(2).max(80),
+        role: z.string().trim().min(2).max(80),
+        phone: z.string().trim().refine((v) => /^\+?[0-9][0-9 -]{1,19}$/.test(v), 'EMERGENCY_PHONE_INVALID'),
+        hours: z.string().trim().min(1).max(60),
+      }),
+    )
+    .max(30),
+});
+
+/** FR-57. */
+export const committeeQuerySchema = z.object({ month: monthSchema });

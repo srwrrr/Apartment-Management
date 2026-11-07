@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { occupancyCreateSchema, occupancyUpdateSchema } from '@apt/shared';
 import { prisma } from '../../lib/prisma';
 import { ApiError, assertUuid, notFound } from '../../lib/errors';
-import { dateOnly } from '../../lib/dates';
+import { dateOnly, todayDhaka } from '../../lib/dates';
 import { logActivity } from '../activity/activity';
+import { closeAccountIfNoHome } from './household.service';
 
 type Tx = Prisma.TransactionClient;
 const FAR_FUTURE = new Date('9999-12-31T00:00:00Z');
@@ -23,6 +24,7 @@ export function mapOccupancyError(e: unknown): never {
 const withResident = {
   resident: { select: { id: true, fullName: true, phone: true, isActive: true } },
   unit: { select: { id: true, unitNumber: true, floor: true } },
+  household: { orderBy: { addedAt: 'asc' }, include: { user: { select: { id: true, fullName: true, loginId: true, isActive: true } } } },
 } satisfies Prisma.OccupancyInclude;
 
 /**
@@ -48,6 +50,7 @@ export async function endOccupancy(tx: Tx, occ: Occupancy, end: Date, newContact
   const members = await tx.householdMember.findMany({ where: { occupancyId: occ.id, removedAt: null } });
   for (const m of members) {
     await tx.householdMember.update({ where: { id: m.id }, data: { removedAt: end < m.addedAt ? m.addedAt : end } });
+    if (end <= dateOnly(todayDhaka())) await closeAccountIfNoHome(tx, m.userId); // FR-54
   }
 
   if (wasActiveContact && others.length > 0) {

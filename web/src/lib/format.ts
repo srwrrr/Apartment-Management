@@ -10,6 +10,12 @@ export function formatDate(value: string | Date | null | undefined): string {
   return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date);
 }
 
+/** "Nov 26": for a chart at phone width. */
+export function monthShort(ym: string): string {
+  const locale = currentLang() === 'bn' ? 'bn-BD-u-nu-latn' : 'en-GB';
+  return new Intl.DateTimeFormat(locale, { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(`${ym}-01T00:00:00Z`));
+}
+
 /** <input type="date"> value (YYYY-MM-DD) for today in Dhaka. */
 export function todayYmd(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka' }).format(new Date());

@@ -11,11 +11,11 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    // FR-48. Only the app's own files are stored on the phone. Nothing here matches /api, so bills, payments,
-    // requests and profiles always go straight to the network and are never kept on the device.
+    // FR-48. Only the app's own files are stored on the phone, plus the emergency numbers (FR-52), which are not
+    // private. Nothing else under /api matches, so bills, payments, requests and profiles are never kept on the device.
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['offline.html', 'icons/*.png'],
+      includeAssets: ['offline.html', 'offline.js', 'icons/*.png'],
       manifest: {
         name: 'Apartment Management',
         short_name: 'Apartment',
@@ -39,6 +39,12 @@ export default defineConfig({
             urlPattern: ({ request }) => request.mode === 'navigate',
             handler: 'NetworkOnly',
             options: { precacheFallback: { fallbackURL: 'offline.html' } },
+          },
+          {
+            urlPattern: ({ url }) => url.pathname === '/api/emergency-contacts',
+            method: 'GET',
+            handler: 'NetworkFirst',
+            options: { cacheName: 'emergency-contacts', networkTimeoutSeconds: 4, cacheableResponse: { statuses: [200] } },
           },
         ],
       },

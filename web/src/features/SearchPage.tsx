@@ -100,7 +100,7 @@ export function SearchPage() {
                   <Link to={`/requests/${x.id}`} className={row}>
                     <span className="font-semibold">#{x.number}</span>
                     <span className="min-w-0 flex-1 break-words">{x.title}</span>
-                    <span className="text-muted">{x.unit.unitNumber}</span>
+                    <span className="text-muted">{x.unit?.unitNumber ?? t('maintenance.noUnit')}</span>
                     <RequestStatusChip status={x.status} />
                   </Link>
                 </li>

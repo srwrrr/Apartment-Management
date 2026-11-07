@@ -338,6 +338,56 @@ function Timeline({ req }: { req: RequestDetail }) {
   );
 }
 
+// ------------------------------------------------------- rating (FR-50, BR-26)
+
+function RatingForm({ req }: { req: RequestDetail }) {
+  const { t } = useTranslation();
+  const refresh = useRefresh(req.id);
+  const [stars, setStars] = useState(0);
+  const [comment, setComment] = useState('');
+  const send = useMutation({ mutationFn: () => api.post<RequestDetail>(`/api/requests/${req.id}/rating`, { stars, comment }), onSuccess: refresh });
+  return (
+    <Card>
+      <h2 className="text-xl font-bold">{t('rating.title')}</h2>
+      <p className="mb-3 text-muted">{t('rating.help')}</p>
+      <form
+        className="space-y-3"
+        onSubmit={(e: FormEvent) => {
+          e.preventDefault();
+          send.mutate();
+        }}
+      >
+        <fieldset>
+          <legend className="mb-1 font-semibold">{t('rating.stars')}</legend>
+          <div className="flex flex-wrap gap-1">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <label key={n} className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg border border-line px-2 font-bold has-[:checked]:border-brand-700 has-[:checked]:bg-brand-100 has-[:focus-visible]:outline-2">
+                <input type="radio" name="stars" className="sr-only" value={n} checked={stars === n} onChange={() => setStars(n)} />
+                <span aria-hidden="true">{n} ★</span>
+                <span className="sr-only">{t('rating.star', { count: n })}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <Field label={t('rating.comment')}>{(p) => <TextArea {...p} rows={2} value={comment} onChange={(e) => setComment(e.target.value)} />}</Field>
+        {send.isError && <Notice>{errorMessage(t, send.error)}</Notice>}
+        <Button type="submit" disabled={stars === 0 || send.isPending}>{t('rating.submit')}</Button>
+      </form>
+    </Card>
+  );
+}
+
+function RatingCard({ rating, own }: { rating: NonNullable<RequestDetail['rating']>; own: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <h2 className="text-lg font-bold">{own ? t('rating.yours') : t('rating.given')}</h2>
+      <p className="text-xl font-bold" data-testid="rating">{t('rating.star', { count: rating.stars })}</p>
+      {rating.comment && <p className="mt-1 whitespace-pre-wrap">{rating.comment}</p>}
+    </Card>
+  );
+}
+
 // --------------------------------------------------------------------- page
 
 export function RequestDetailPage() {
@@ -373,7 +423,7 @@ export function RequestDetailPage() {
           <dl className="grid grid-cols-2 gap-4">
             <div>
               <dt className="text-sm text-muted">{t('maintenance.unit')}</dt>
-              <dd className="font-bold">{r.unit.unitNumber}</dd>
+              <dd className="font-bold">{r.unit?.unitNumber ?? t('maintenance.noUnit')}</dd>
             </div>
             <div>
               <dt className="text-sm text-muted">{t('maintenance.category')}</dt>
@@ -391,8 +441,8 @@ export function RequestDetailPage() {
             </div>
             <div>
               <dt className="text-sm text-muted">{t('maintenance.reportedBy')}</dt>
-              <dd className="font-bold">{r.submittedBy.fullName}</dd>
-              {r.submittedBy.phone && (
+              <dd className="font-bold">{r.submittedBy?.fullName ?? t('maintenance.system')}</dd>
+              {r.submittedBy?.phone && (
                 <dd>
                   <a href={`tel:${r.submittedBy.phone}`} className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
                     {r.submittedBy.phone}
@@ -415,6 +465,8 @@ export function RequestDetailPage() {
         </Card>
         <div className="space-y-4">
           {resident ? <ResidentActions req={r} /> : <StaffActions req={r} />}
+          {r.canRate && <RatingForm req={r} />}
+          {r.rating && <RatingCard rating={r.rating} own={resident} />}
           {canNote && <NoteForm req={r} />}
           {!OPEN.includes(r.status) && r.status !== 'RESOLVED' && <Notice tone="info">{t('maintenance.finished')}</Notice>}
         </div>

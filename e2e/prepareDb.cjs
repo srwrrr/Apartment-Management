@@ -19,10 +19,10 @@ const { Client } = require(require.resolve('pg', { paths: [server] }));
 
   const db = new Client({ connectionString: E2E_DB });
   await db.connect();
-  await db.query('TRUNCATE users, units, settings, "session" RESTART IDENTITY CASCADE');
+  await db.query('TRUNCATE users, units, settings, "session", emergency_contacts, resident_groups RESTART IDENTITY CASCADE');
   await db.end();
 
-  execSync('npx tsx prisma/seed.ts', { cwd: server, env, stdio: 'pipe' });
+  execSync('npx tsx prisma/seed.ts --accounts-only', { cwd: server, env, stdio: 'pipe' });
   console.log('e2e database ready');
 })().catch((e) => {
   console.error(e);

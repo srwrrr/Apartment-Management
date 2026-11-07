@@ -9,7 +9,9 @@ export const uid = () => `${Date.now().toString(36)}${(n++).toString(36)}`;
 
 export async function resetDb() {
   await prisma.$executeRaw`DELETE FROM "session"`;
-  await prisma.$executeRaw`TRUNCATE "activity_logs"`; // rows cannot be deleted, even by the tests
+  await prisma.$executeRaw`TRUNCATE "activity_logs", "request_ratings"`; // rows cannot be deleted, even by the tests
+  await prisma.residentGroup.deleteMany();
+  await prisma.emergencyContact.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.announcementRecipient.deleteMany();
   await prisma.announcementAudience.deleteMany();
@@ -20,6 +22,7 @@ export async function resetDb() {
   await prisma.expense.deleteMany();
   await prisma.requestUpdate.deleteMany();
   await prisma.maintenanceRequest.deleteMany();
+  await prisma.scheduledTask.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.charge.deleteMany();
   await prisma.bill.deleteMany();

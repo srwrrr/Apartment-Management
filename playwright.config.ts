@@ -31,7 +31,7 @@ export default defineConfig({
       url: `http://localhost:${API_PORT}/api/health`,
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { DATABASE_URL: E2E_DB, PORT: String(API_PORT), SESSION_SECRET: 'e2e-secret-e2e-secret-123456', NODE_ENV: 'development' },
+      env: { DATABASE_URL: E2E_DB, PORT: String(API_PORT), SESSION_SECRET: 'e2e-secret-e2e-secret-123456', NODE_ENV: 'development', DEMO_MODE: 'true' },
     },
     {
       command: `npx vite --port ${WEB_PORT} --strictPort`,

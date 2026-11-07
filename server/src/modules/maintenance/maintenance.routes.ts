@@ -8,6 +8,9 @@ import {
   requestListQuerySchema,
   requestNoteSchema,
   requestPrioritySchema,
+  requestRatingSchema,
+  scheduledTaskCreateSchema,
+  scheduledTaskUpdateSchema,
   requestTransitionSchema,
 } from '@apt/shared';
 import { hasPermission } from '@apt/shared';
@@ -19,16 +22,22 @@ import {
   addNote,
   assignRequest,
   createRequest,
+  exportRequests,
   getRequest,
   listAssignees,
   listMyRequests,
   listMyTasks,
   listRequests,
+  rateRequest,
   requireRequestAccess,
   setPriority,
   transition,
 } from './requests.service';
 import { canReadAllBills, residentCanSeeBill } from '../billing/access';
+import { strings } from '../billing/receipt';
+import { sendCsv, toCsv } from '../../lib/csv';
+import { ymdDhaka } from '../../lib/dates';
+import { createScheduledTask, listScheduledTasks, setPaused, updateScheduledTask, upcomingScheduledTasks } from './scheduledTasks.service';
 
 // Photos arrive in memory so each one can be checked by its real content before anything is written (BR-19, NFR-06).
 const photos = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PHOTO_BYTES, files: MAX_PHOTOS, fields: 12 } }).array('photos', MAX_PHOTOS);
@@ -52,6 +61,36 @@ requestsRouter.post(
 const listers = requireAnyPermission('maintenance.view_all', 'maintenance.review', 'maintenance.assign');
 requestsRouter.get('/', listers, asyncHandler(async (req, res) => res.json(await listRequests(requestListQuerySchema.parse(req.query), req.user!))));
 
+// FR-38: the list as it stands, with the same filters. Must come before '/:id'.
+requestsRouter.get(
+  '/export.csv',
+  listers,
+  asyncHandler(async (req, res) => {
+    const all = strings[req.user!.language];
+    const t = all.csv;
+    const rows = await exportRequests(requestListQuerySchema.parse(req.query), req.user!);
+    sendCsv(
+      res,
+      'maintenance-requests.csv',
+      toCsv(
+        [t.number, t.title, t.category, t.status, t.priority, t.unit, t.submittedBy, t.assignedTo, t.created, t.resolved],
+        rows.map((r) => [
+          r.number,
+          r.title,
+          all.requestCategory[r.category],
+          all.requestStatus[r.status],
+          r.priority ? all.requestPriority[r.priority] : '',
+          r.unit?.unitNumber ?? '',
+          r.submittedBy?.fullName ?? '',
+          r.assignedTo?.fullName ?? '',
+          ymdDhaka(r.createdAt),
+          r.resolvedAt ? ymdDhaka(r.resolvedAt) : '',
+        ]),
+      ),
+    );
+  }),
+);
+
 // Who a request can be assigned to. Must come before '/:id'.
 requestsRouter.get('/assignees', requirePermission('maintenance.assign'), asyncHandler(async (_req, res) => res.json(await listAssignees())));
 
@@ -74,11 +113,23 @@ requestsRouter.post(
     res.json(await transition(param(req.params.id), to, note, req.user!));
   }),
 );
+// FR-50: the submitter, once, after confirming or within 7 days of closing.
+requestsRouter.post('/:id/rating', asyncHandler(async (req, res) => res.status(201).json(await rateRequest(param(req.params.id), requestRatingSchema.parse(req.body), req.user!))));
 requestsRouter.post(
   '/:id/notes',
   photos,
   asyncHandler(async (req, res) => res.status(201).json(await addNote(param(req.params.id), requestNoteSchema.parse(req.body), files(req), req.user!))),
 );
+
+// ------------------------------------------------- scheduled tasks (FR-49)
+export const scheduledTasksRouter = Router();
+scheduledTasksRouter.use(requireAuth, requirePermission('maintenance.assign'));
+scheduledTasksRouter.get('/', asyncHandler(async (_req, res) => res.json(await listScheduledTasks())));
+scheduledTasksRouter.get('/upcoming', asyncHandler(async (_req, res) => res.json(await upcomingScheduledTasks())));
+scheduledTasksRouter.post('/', asyncHandler(async (req, res) => res.status(201).json(await createScheduledTask(scheduledTaskCreateSchema.parse(req.body), req.user!))));
+scheduledTasksRouter.patch('/:id', asyncHandler(async (req, res) => res.json(await updateScheduledTask(param(req.params.id), scheduledTaskUpdateSchema.parse(req.body)))));
+scheduledTasksRouter.post('/:id/pause', asyncHandler(async (req, res) => res.json(await setPaused(param(req.params.id), true))));
+scheduledTasksRouter.post('/:id/resume', asyncHandler(async (req, res) => res.json(await setPaused(param(req.params.id), false))));
 
 // ---------------------------------------------------------------- photo files
 export const attachmentsRouter = Router();

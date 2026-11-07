@@ -8,7 +8,15 @@ import { Button, Card, Chip, Field, Notice, PageHeader, Pagination, Select, Spin
 import { api } from '../lib/api';
 import { errorMessage, fieldErrorsOf } from '../lib/errors';
 import { formatDate, formatDateTime } from '../lib/format';
-import type { AnnouncementDetail, AnnouncementRow, Page, Unit } from '../lib/types';
+import type { AnnouncementDetail, AnnouncementRow, GroupRow, Page, Unit } from '../lib/types';
+
+/** What stage it is at, for the people who manage announcements (FR-51). */
+function StateChip({ a }: { a: Pick<AnnouncementRow, 'state'> }) {
+  const { t } = useTranslation();
+  if (a.state === 'SCHEDULED') return <Chip tone="amber">{t('announcements.scheduled')}</Chip>;
+  if (a.state === 'ENDED') return <Chip>{t('announcements.ended')}</Chip>;
+  return null;
+}
 
 function CategoryChips({ a }: { a: Pick<AnnouncementRow, 'category' | 'isImportant'> }) {
   const { t } = useTranslation();
@@ -25,9 +33,10 @@ export function AnnouncementsPage() {
   const manage = can('announcements.manage');
   const [page, setPage] = useState(1);
   const [archived, setArchived] = useState(false);
+  const [past, setPast] = useState(false);
   const q = useQuery({
-    queryKey: ['announcements', page, archived],
-    queryFn: () => api.get<Page<AnnouncementRow>>(`/api/announcements?page=${page}${manage && archived ? '&archived=true' : ''}`),
+    queryKey: ['announcements', page, archived, past],
+    queryFn: () => api.get<Page<AnnouncementRow>>(`/api/announcements?page=${page}${manage && archived ? '&archived=true' : ''}${!manage && past ? '&past=true' : ''}`),
   });
   return (
     <>
@@ -52,12 +61,26 @@ export function AnnouncementsPage() {
           {t('announcements.showArchived')}
         </label>
       )}
+      {!manage && (
+        <label className="mb-4 flex min-h-11 items-center gap-2 font-semibold">
+          <input
+            type="checkbox"
+            className="h-5 w-5"
+            checked={past}
+            onChange={(e) => {
+              setPast(e.target.checked);
+              setPage(1);
+            }}
+          />
+          {t('announcements.past')}
+        </label>
+      )}
       {q.isLoading ? (
         <Spinner />
       ) : q.isError ? (
         <Notice>{errorMessage(t, q.error)}</Notice>
       ) : q.data!.items.length === 0 ? (
-        <p className="py-6 text-muted">{t('announcements.empty')}</p>
+        <p className="py-6 text-muted">{past ? t('announcements.noPast') : t('announcements.empty')}</p>
       ) : (
         <Card className="!p-0">
           <ul className="divide-y divide-line">
@@ -68,12 +91,13 @@ export function AnnouncementsPage() {
                     <span className={`text-lg ${manage || a.read ? 'font-semibold' : 'font-bold'}`}>{a.title}</span>
                     {!manage && !a.read && <Chip tone="green">{t('announcements.unread')}</Chip>}
                     <CategoryChips a={a} />
+                    <StateChip a={a} />
                     {a.archivedAt && <Chip>{t('announcements.archived')}</Chip>}
                   </span>
                   {a.preview && <span className="mt-1 block text-muted">{a.preview}</span>}
                   <span className="mt-1 block text-sm text-muted">
-                    {t('announcements.published', { date: formatDate(a.publishedAt), author: a.author })}
-                    {manage && typeof a.recipients === 'number' && <> · {t('announcements.readBy', { read: a.read as number, recipients: a.recipients })}</>}
+                    {a.state === 'SCHEDULED' ? t('announcements.scheduledFor', { date: formatDateTime(a.publishedAt) }) : t('announcements.published', { date: formatDate(a.publishedAt), author: a.author })}
+                    {manage && a.state !== 'SCHEDULED' && typeof a.recipients === 'number' && <> · {t('announcements.readBy', { read: a.read as number, recipients: a.recipients })}</>}
                   </span>
                 </Link>
               </li>
@@ -226,12 +250,14 @@ export function AnnouncementDetailPage() {
         <Card>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <CategoryChips a={a} />
+            <StateChip a={a} />
             {a.archivedAt && <Chip>{t('announcements.archived')}</Chip>}
           </div>
           <h1 className="text-2xl font-bold">{a.title}</h1>
           <p className="mb-4 text-sm text-muted">
-            {t('announcements.published', { date: formatDateTime(a.publishedAt), author: a.author })}
+            {a.state === 'SCHEDULED' ? t('announcements.scheduledFor', { date: formatDateTime(a.publishedAt) }) : t('announcements.published', { date: formatDateTime(a.publishedAt), author: a.author })}
             {a.editedAt && <> · {t('announcements.edited', { date: formatDateTime(a.editedAt) })}</>}
+            {a.endsAt && <> · {t('announcements.endsOn', { date: formatDateTime(a.endsAt) })}</>}
           </p>
           <p className="whitespace-pre-wrap text-lg">{a.body}</p>
           {manage && a.audience && (
@@ -239,6 +265,7 @@ export function AnnouncementDetailPage() {
               {t('announcements.sentTo')}: {t(`announcements.audienceType.${a.audience.type}`)}
               {a.audience.type === 'UNITS' && <> — {t('announcements.sentToUnits', { units: a.audience.units.map((u) => u.unitNumber).join(', ') })}</>}
               {a.audience.type === 'FLOORS' && <> — {t('announcements.sentToFloors', { floors: a.audience.floors.join(', ') })}</>}
+              {a.audience.type === 'GROUP' && <> — {t('announcements.sentToGroup', { name: a.audience.group ?? t('announcements.groupDeleted') })}</>}
             </p>
           )}
           {manage && !a.archivedAt && (
@@ -246,6 +273,9 @@ export function AnnouncementDetailPage() {
               <Button variant="secondary" onClick={() => setEditing(true)}>
                 {t('common.edit')}
               </Button>
+              <a href={`/api/announcements/${id}/notice.pdf`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center rounded-lg border border-line px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50">
+                {t('announcements.printNotice')}
+              </a>
               <Button
                 variant="danger"
                 disabled={archive.isPending}
@@ -259,12 +289,12 @@ export function AnnouncementDetailPage() {
           )}
         </Card>
       )}
-      {manage && <ReadStatus id={id} />}
+      {manage && a.state !== 'SCHEDULED' && <ReadStatus id={id} />}
     </>
   );
 }
 
-type AudienceType = 'ALL' | 'OWNERS' | 'TENANTS' | 'FLOORS' | 'UNITS';
+type AudienceType = 'ALL' | 'OWNERS' | 'TENANTS' | 'FLOORS' | 'UNITS' | 'GROUP';
 
 export function NewAnnouncementPage() {
   const { t } = useTranslation();
@@ -279,11 +309,29 @@ export function NewAnnouncementPage() {
   const [units, setUnits] = useState<{ id: string; unitNumber: string }[]>([]);
   const [term, setTerm] = useState('');
   const debounced = useDebounced(term);
+  const [groupId, setGroupId] = useState('');
+  const [publishAt, setPublishAt] = useState('');
+  const [endsAt, setEndsAt] = useState('');
+  const groups = useQuery({ queryKey: ['groups'], enabled: type === 'GROUP', queryFn: () => api.get<{ items: GroupRow[] }>('/api/groups') });
+  // The browser gives local time; the server is told the exact moment.
+  const moment = (v: string) => (v ? new Date(v).toISOString() : undefined);
 
   const floors = floorsText.split(/[,\s]+/).filter(Boolean).map(Number);
   const floorsValid = floors.length > 0 && floors.every((f) => Number.isInteger(f));
   const audience =
-    type === 'UNITS' ? (units.length ? { type, unitIds: units.map((u) => u.id) } : null) : type === 'FLOORS' ? (floorsValid ? { type, floors } : null) : { type };
+    type === 'UNITS'
+      ? units.length
+        ? { type, unitIds: units.map((u) => u.id) }
+        : null
+      : type === 'FLOORS'
+        ? floorsValid
+          ? { type, floors }
+          : null
+        : type === 'GROUP'
+          ? groupId
+            ? { type, groupId }
+            : null
+          : { type };
 
   const found = useQuery({
     queryKey: ['unit-search', debounced],
@@ -297,7 +345,7 @@ export function NewAnnouncementPage() {
   });
 
   const publish = useMutation({
-    mutationFn: () => api.post<{ id: string }>('/api/announcements', { title, body, category, isImportant: important, audience }),
+    mutationFn: () => api.post<{ id: string }>('/api/announcements', { title, body, category, isImportant: important, audience, publishAt: moment(publishAt), endsAt: moment(endsAt) }),
     onSuccess: async (a) => {
       await qc.invalidateQueries({ queryKey: ['announcements'] });
       navigate(`/announcements/${a.id}`);
@@ -341,7 +389,7 @@ export function NewAnnouncementPage() {
           <Field label={t('announcements.audience')} error={fe.audience}>
             {(p) => (
               <Select {...p} value={type} onChange={(e) => setType(e.target.value as AudienceType)}>
-                {(['ALL', 'OWNERS', 'TENANTS', 'FLOORS', 'UNITS'] as const).map((a) => (
+                {(['ALL', 'OWNERS', 'TENANTS', 'FLOORS', 'UNITS', 'GROUP'] as const).map((a) => (
                   <option key={a} value={a}>
                     {t(`announcements.audienceType.${a}`)}
                   </option>
@@ -349,6 +397,20 @@ export function NewAnnouncementPage() {
               </Select>
             )}
           </Field>
+          {type === 'GROUP' && (
+            <Field label={t('announcements.group')} help={groups.data?.items.length === 0 ? t('announcements.noGroups') : undefined}>
+              {(p) => (
+                <Select {...p} value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+                  <option value="">{t('announcements.chooseGroup')}</option>
+                  {groups.data?.items.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name} ({g.members === 1 ? t('groups.oneMember') : t('groups.memberCount', { count: g.members })})
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+          )}
           {type === 'FLOORS' && (
             <Field label={t('announcements.floors')} help={t('announcements.floorsHelp')}>
               {(p) => <TextInput {...p} inputMode="numeric" value={floorsText} onChange={(e) => setFloorsText(e.target.value)} />}
@@ -386,9 +448,17 @@ export function NewAnnouncementPage() {
               {reach.data.count > 0 ? t('announcements.reach', { count: reach.data.count }) : t('announcements.reachNobody')}
             </p>
           )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label={t('announcements.publishAt')} help={t('announcements.publishAtHelp')} error={fe.publishAt}>
+              {(p) => <TextInput {...p} type="datetime-local" value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />}
+            </Field>
+            <Field label={t('announcements.endsAt')} help={t('announcements.endsAtHelp')} error={fe.endsAt}>
+              {(p) => <TextInput {...p} type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />}
+            </Field>
+          </div>
           {publish.isError && !Object.keys(fe).length && <Notice>{errorMessage(t, publish.error)}</Notice>}
           <Button type="submit" disabled={publish.isPending || !audience}>
-            {t('announcements.publish')}
+            {publishAt && new Date(publishAt) > new Date() ? t('announcements.schedule') : t('announcements.publish')}
           </Button>
         </form>
       </Card>

@@ -26,7 +26,7 @@ test.describe('NFR-12 accessibility', () => {
     await login(page, ADMIN);
     [tenant] = (await importTenants(page, [''])) as [Tenant];
     const found: string[] = [];
-    for (const path of ['/', '/units', '/residents', '/bills', '/bills/generate', '/fees', '/requests', '/announcements', '/announcements/new', '/payment-reports', '/expenses', '/reports', '/search?q=demo', '/activity', '/notifications', '/directory', '/staff', '/import', '/settings']) {
+    for (const path of ['/', '/units', '/residents', '/bills', '/bills/generate', '/fees', '/requests', '/announcements', '/announcements/new', '/groups', '/scheduled-tasks', '/emergency', '/payment-reports', '/expenses', '/reports', '/search?q=demo', '/activity', '/notifications', '/directory', '/staff', '/import', '/settings']) {
       found.push(...(await scan(page, path)));
     }
     expect(found).toEqual([]);
@@ -37,7 +37,7 @@ test.describe('NFR-12 accessibility', () => {
     test.setTimeout(120_000);
     await firstLogin(page, tenant.email, tenant.temp);
     const found: string[] = [];
-    for (const path of ['/', '/bills', '/statement', '/requests', '/requests/new', '/announcements', '/notifications', '/profile']) {
+    for (const path of ['/', '/bills', '/statement', '/requests', '/requests/new', '/announcements', '/emergency', '/notifications', '/profile']) {
       found.push(...(await scan(page, path)));
     }
     expect(found).toEqual([]);

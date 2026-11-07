@@ -20,6 +20,7 @@ export function notificationText(t: TFunction, n: Pick<NotificationItem, 'type' 
     if (typeof p.status === 'string') return t('notifications.text.REQUEST_UPDATE_STATUS', { ...p, status: t(`requestStatus.${p.status}`) });
     if (p.note) return t('notifications.text.REQUEST_UPDATE_NOTE', p);
   }
+  if (n.type === 'REQUEST_ASSIGNED' && !p.unit) return t('notifications.text.REQUEST_ASSIGNED_COMMON', p); // a scheduled job has no unit
   return t(`notifications.text.${n.type}`, p);
 }
 

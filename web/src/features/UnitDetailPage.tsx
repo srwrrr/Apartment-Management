@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { HouseholdMembers } from './HouseholdMembers';
 import { BILL_READ_PERMISSIONS } from '@apt/shared';
 import { UnitCertificatesSection } from './StatementPage';
 import { Link, useParams } from 'react-router-dom';
@@ -264,6 +265,7 @@ export function UnitDetailPage() {
                       )}
                     </div>
                   )}
+                  <HouseholdMembers stay={o} unitId={id} />
                 </li>
               ))}
             </ul>

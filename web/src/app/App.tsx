@@ -9,6 +9,9 @@ import { MyStatementPage, UnitStatementPage } from '../features/StatementPage';
 import { MoveOutPage } from '../features/MoveOutPage';
 import { BuildingSummaryPage, ExpensesPage } from '../features/ExpensesPage';
 import { ActivityPage } from '../features/ActivityPage';
+import { EmergencyPage } from '../features/EmergencyPage';
+import { GroupDetailPage, GroupsPage } from '../features/GroupsPage';
+import { ScheduledTasksPage } from '../features/ScheduledTasksPage';
 import { SearchPage } from '../features/SearchPage';
 import { BillDetailPage } from '../features/BillDetailPage';
 import { BillsPage } from '../features/BillsPage';
@@ -89,6 +92,10 @@ export function App() {
         <Route path="announcements" element={<AnnouncementsPage />} />
         <Route path="announcements/new" element={<RequireAccess anyOf={['announcements.manage']}><NewAnnouncementPage /></RequireAccess>} />
         <Route path="announcements/:id" element={<AnnouncementDetailPage />} />
+        <Route path="emergency" element={<EmergencyPage />} />
+        <Route path="groups" element={<RequireAccess anyOf={['announcements.manage']}><GroupsPage /></RequireAccess>} />
+        <Route path="groups/:id" element={<RequireAccess anyOf={['announcements.manage']}><GroupDetailPage /></RequireAccess>} />
+        <Route path="scheduled-tasks" element={<RequireAccess anyOf={['maintenance.assign']}><ScheduledTasksPage /></RequireAccess>} />
         <Route path="reports" element={<RequireAccess anyOf={['reports.view']}><ReportsPage /></RequireAccess>} />
         <Route path="fees" element={<RequireAccess anyOf={['billing.manage']}><FeesPage /></RequireAccess>} />
         <Route path="settings" element={<RequireAccess role="ADMIN"><SettingsPage /></RequireAccess>} />

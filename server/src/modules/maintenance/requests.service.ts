@@ -1,6 +1,6 @@
 import { Prisma, type RequestPriority, type RequestStatus } from '@prisma/client';
 import { z } from 'zod';
-import { hasPermission, requestCreateSchema, requestListQuerySchema } from '@apt/shared';
+import { hasPermission, requestCreateSchema, requestListQuerySchema, requestRatingSchema } from '@apt/shared';
 import { prisma } from '../../lib/prisma';
 import { ApiError, assertUuid, forbidden, notFound } from '../../lib/errors';
 import { removeStored, storeImages } from '../../lib/files';
@@ -32,11 +32,11 @@ interface Access {
   assignee: boolean;
 }
 
-async function accessTo(user: AuthUser, r: { submittedById: string; assignedToId: string | null }): Promise<Access> {
+async function accessTo(user: AuthUser, r: { submittedById: string | null; assignedToId: string | null }): Promise<Access> {
   const staff = user.role !== 'RESIDENT' && seesAllRequests(user);
   const assignee = user.role !== 'RESIDENT' && r.assignedToId === user.id;
   let household = false;
-  if (user.role === 'RESIDENT') {
+  if (user.role === 'RESIDENT' && r.submittedById) {
     const rows = await prisma.$queryRaw<{ n: number }[]>`
       SELECT 1 AS n FROM household_peers WHERE "userId" = ${user.id}::uuid AND "peerId" = ${r.submittedById}::uuid LIMIT 1`;
     household = rows.length > 0;
@@ -50,6 +50,7 @@ const requestInclude = {
   submittedBy: { select: { id: true, fullName: true, phone: true } },
   unit: { select: { id: true, unitNumber: true, floor: true } },
   assignedTo: { select: { id: true, fullName: true } },
+  rating: { select: { stars: true, comment: true, createdAt: true } },
   attachments: { select: { id: true, originalName: true, mimeType: true, requestUpdateId: true }, orderBy: { createdAt: 'asc' } },
   updates: {
     orderBy: { seq: 'asc' },
@@ -62,10 +63,16 @@ const requestInclude = {
 
 type FullRequest = Prisma.MaintenanceRequestGetPayload<{ include: typeof requestInclude }>;
 
+/** BR-26: a request can be rated for this many days after it closes. */
+const RATING_DAYS = 7;
+const ratingWindowOpen = (r: { status: RequestStatus; closedAt: Date | null }, now = new Date()) =>
+  r.status === 'CLOSED' && r.closedAt !== null && now.getTime() - r.closedAt.getTime() <= RATING_DAYS * 86_400_000;
+
 const isOverdue = (r: { status: RequestStatus; dueAt: Date }, now = new Date()) => !FINISHED.includes(r.status) && r.dueAt < now;
 
 /** One request as the API returns it. Residents never get internal notes, the submitter's phone, or staff-only fields. */
-function toDto(r: FullRequest, audience: 'staff' | 'resident') {
+function toDto(r: FullRequest, audience: 'staff' | 'resident', viewer: AuthUser) {
+  const submitter = r.submittedById !== null && r.submittedById === viewer.id;
   return {
     id: r.id,
     number: r.number,
@@ -83,7 +90,11 @@ function toDto(r: FullRequest, audience: 'staff' | 'resident') {
     closedAt: r.closedAt,
     unit: r.unit,
     assignedTo: r.assignedTo,
-    submittedBy: audience === 'staff' ? r.submittedBy : { id: r.submittedBy.id, fullName: r.submittedBy.fullName },
+    scheduled: r.scheduledTaskId !== null,
+    // FR-50: the person who gave it, the administrator and the assigned staff member.
+    rating: submitter || viewer.role === 'ADMIN' || (r.assignedToId !== null && r.assignedToId === viewer.id) ? r.rating : null,
+    canRate: submitter && r.rating === null && ratingWindowOpen(r),
+    submittedBy: !r.submittedBy ? null : audience === 'staff' ? r.submittedBy : { id: r.submittedBy.id, fullName: r.submittedBy.fullName },
     photos: r.attachments.filter((a) => a.requestUpdateId === null).map((a) => ({ id: a.id, name: a.originalName })),
     updates: r.updates
       .filter((u) => audience === 'staff' || !u.isInternal)
@@ -121,7 +132,7 @@ async function loadFor(id: string, user: AuthUser) {
 
 export async function getRequest(id: string, user: AuthUser) {
   const { r, audience } = await loadFor(id, user);
-  return toDto(r, audience);
+  return toDto(r, audience, user);
 }
 
 /** Can this person see the request that an attachment belongs to? (for photo downloads) */
@@ -148,7 +159,7 @@ async function facts(tx: Tx, id: string) {
     where: { id },
     select: { number: true, title: true, submittedById: true, assignedToId: true, unit: { select: { unitNumber: true } } },
   });
-  return { number: r.number, title: r.title, unit: r.unit.unitNumber, submittedById: r.submittedById, assignedToId: r.assignedToId };
+  return { number: r.number, title: r.title, unit: r.unit?.unitNumber ?? null, submittedById: r.submittedById, assignedToId: r.assignedToId };
 }
 
 /**
@@ -158,7 +169,7 @@ async function facts(tx: Tx, id: string) {
  */
 async function tellAboutRequest(tx: Tx, id: string, actorId: string | null, params: Record<string, unknown>, opts: { assignee?: boolean } = {}) {
   const f = await facts(tx, id);
-  const audience = new Set(await householdOf(tx, [f.submittedById]));
+  const audience = new Set(f.submittedById ? await householdOf(tx, [f.submittedById]) : []);
   if (f.assignedToId && opts.assignee !== false) audience.add(f.assignedToId);
   if (actorId) audience.delete(actorId);
   await notify(tx, audience, { type: 'REQUEST_UPDATE', params: { number: f.number, title: f.title, unit: f.unit, ...params }, link: `/requests/${id}`, entityId: id });
@@ -225,8 +236,7 @@ export async function createRequest(user: AuthUser, input: z.infer<typeof reques
 
 // ------------------------------------------------------------------ lists
 
-/** The full list for staff who look after maintenance (FR-18, FR-22). */
-export async function listRequests(query: z.infer<typeof requestListQuerySchema>, user: AuthUser) {
+function listWhere(query: z.infer<typeof requestListQuerySchema>, user: AuthUser) {
   const where: Prisma.MaintenanceRequestWhereInput = {};
   if (query.status) where.status = query.status;
   if (query.category) where.category = query.category;
@@ -253,6 +263,22 @@ export async function listRequests(query: z.infer<typeof requestListQuerySchema>
       ...(n ? [{ number: Number(n[1]) }] : []),
     ];
   }
+  return where;
+}
+
+/** FR-38: the same filters as the list, without the paging. */
+export async function exportRequests(query: z.infer<typeof requestListQuerySchema>, user: AuthUser) {
+  return prisma.maintenanceRequest.findMany({
+    where: listWhere(query, user),
+    orderBy: [{ createdAt: query.sort === 'oldest' ? 'asc' : 'desc' }, { id: 'asc' }],
+    take: 20_000,
+    include: { unit: { select: { unitNumber: true } }, assignedTo: { select: { fullName: true } }, submittedBy: { select: { fullName: true } } },
+  });
+}
+
+/** The full list for staff who look after maintenance (FR-18, FR-22). */
+export async function listRequests(query: z.infer<typeof requestListQuerySchema>, user: AuthUser) {
+  const where = listWhere(query, user);
   const [total, rows] = await Promise.all([
     prisma.maintenanceRequest.count({ where }),
     prisma.maintenanceRequest.findMany({
@@ -277,7 +303,8 @@ export async function listRequests(query: z.infer<typeof requestListQuerySchema>
       dueAt: r.dueAt,
       unit: r.unit,
       assignedTo: r.assignedTo,
-      submittedBy: r.submittedBy.fullName,
+      submittedBy: r.submittedBy?.fullName ?? null,
+      scheduled: r.scheduledTaskId !== null,
     })),
     page: query.page,
     pageSize: query.pageSize,
@@ -351,7 +378,8 @@ export async function setPriority(id: string, priority: RequestPriority, user: A
     if (!OPEN_FOR_STAFF.includes(r.status)) throw new ApiError(409, 'REQUEST_FINISHED');
     if (r.priority === priority) return; // already that priority
     // The deadline follows the priority, counted from when the request was submitted (BR-17).
-    const dueAt = new Date(r.createdAt.getTime() + slaHours(sla, priority) * 3_600_000);
+    // A scheduled job keeps its due date, or it could be overdue before the job is due (BR-25).
+    const dueAt = r.scheduledTaskId ? r.dueAt : new Date(r.createdAt.getTime() + slaHours(sla, priority) * 3_600_000);
     await tx.maintenanceRequest.update({ where: { id }, data: { priority, dueAt, ...(r.status === 'SUBMITTED' && { status: 'UNDER_REVIEW' }) } });
     await note(tx, { requestId: id, authorId: user.id, kind: 'PRIORITY_CHANGE', fromValue: r.priority, toValue: priority });
     await logActivity(tx, 'request.priority', { entityType: 'request', entityId: id, details: { from: r.priority, to: priority } });
@@ -467,6 +495,24 @@ export async function addNote(id: string, input: { note: string; isInternal: boo
     await removeStored(stored.map((s) => s.storedName));
     throw e;
   }
+  return getRequest(id, user);
+}
+
+// ---------------------------------------------------------- rating (FR-50, BR-26)
+
+export async function rateRequest(id: string, input: z.infer<typeof requestRatingSchema>, user: AuthUser) {
+  await prisma.$transaction(async (tx) => {
+    const r = await lockRequest(tx, id);
+    if (r.submittedById !== user.id) {
+      const access = await accessTo(user, r);
+      if (user.role === 'RESIDENT' && !access.household) throw notFound();
+      throw forbidden(); // only the person who submitted it
+    }
+    if (await tx.requestRating.findUnique({ where: { requestId: id }, select: { requestId: true } })) throw new ApiError(409, 'ALREADY_RATED');
+    if (!ratingWindowOpen(r)) throw new ApiError(409, 'RATING_CLOSED');
+    await tx.requestRating.create({ data: { requestId: id, stars: input.stars, comment: input.comment ?? null, ratedById: user.id } });
+    await logActivity(tx, 'request.rate', { entityType: 'request', entityId: id, details: { number: r.number, stars: input.stars } });
+  });
   return getRequest(id, user);
 }
 

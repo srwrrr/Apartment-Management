@@ -91,6 +91,9 @@ test.describe('Sprint 4: announcements, notifications, dashboard, reports', () =
     await expect(page.getByTestId('dash-billed')).toBeVisible();
     await expect(page.getByTestId('dash-units')).toBeVisible();
     await expect(page.getByTestId('trend').locator('li')).toHaveCount(6);
+    await page.getByRole('button', { name: 'Show as table' }).click();
+    await expect(page.getByTestId('trend-table').locator('tbody tr')).toHaveCount(6);
+    await page.getByRole('button', { name: 'Show as chart' }).click();
     await noSidewaysScroll(page);
 
     await page.goto('/reports');

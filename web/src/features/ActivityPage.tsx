@@ -11,7 +11,8 @@ import { formatDateTime } from '../lib/format';
 import type { ActivityEntry, Page } from '../lib/types';
 
 const MONEY = ['amount', 'total', 'balance', 'reported'];
-const show = (key: string, v: unknown) => (typeof v === 'number' && MONEY.includes(key) ? formatBDT(v) : v === null ? '–' : Array.isArray(v) ? v.join(', ') : String(v));
+const show = (key: string, v: unknown) =>
+  key === 'publishAt' && typeof v === 'string' ? formatDateTime(v) : typeof v === 'number' && MONEY.includes(key) ? formatBDT(v) : v === null ? '–' : Array.isArray(v) ? v.join(', ') : String(v);
 
 /** The facts of an entry as a short line: "unit: 4B · floor: 7 → 8". */
 export function detailLine(details: Record<string, unknown>): string {

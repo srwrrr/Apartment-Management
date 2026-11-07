@@ -42,6 +42,7 @@ export interface Occupancy {
   moveOutNote?: string | null;
   unit: { id: string; unitNumber: string; floor: number };
   resident?: { id: string; fullName: string; phone: string };
+  household?: { id: string; relation: string; removedAt: string | null; user: { id: string; fullName: string; loginId: string; isActive: boolean } }[];
 }
 
 export interface ResidentDetail {
@@ -134,9 +135,10 @@ export interface RequestRow {
   overdue?: boolean;
   createdAt: string;
   dueAt?: string;
-  unit: { id: string; unitNumber: string };
+  unit: { id: string; unitNumber: string } | null;
   assignedTo?: { id: string; fullName: string } | string | null;
-  submittedBy?: string;
+  submittedBy?: string | null;
+  scheduled?: boolean;
 }
 export interface Photo {
   id: string;
@@ -167,9 +169,12 @@ export interface RequestDetail {
   createdAt: string;
   resolvedAt: string | null;
   closedAt: string | null;
-  unit: { id: string; unitNumber: string; floor: number };
+  unit: { id: string; unitNumber: string; floor: number } | null;
   assignedTo: { id: string; fullName: string } | null;
-  submittedBy: { id: string; fullName: string; phone?: string };
+  submittedBy: { id: string; fullName: string; phone?: string } | null;
+  scheduled: boolean;
+  rating: { stars: number; comment: string | null; createdAt: string } | null;
+  canRate: boolean;
   photos: Photo[];
   updates: RequestUpdateEntry[];
 }
@@ -182,7 +187,7 @@ export interface FeeItem {
 
 // ------------------------------------------------------------------ Sprint 4
 export type NotificationType =
-  | 'ANNOUNCEMENT' | 'BILL_NEW' | 'BILL_DUE_SOON' | 'BILL_OVERDUE' | 'PAYMENT_RECORDED' | 'REQUEST_NEW' | 'REQUEST_UPDATE' | 'REQUEST_ASSIGNED'
+  | 'ANNOUNCEMENT' | 'BILL_NEW' | 'BILL_DUE_SOON' | 'BILL_OVERDUE' | 'PAYMENT_RECORDED' | 'REQUEST_NEW' | 'REQUEST_UPDATE' | 'REQUEST_ASSIGNED' | 'REQUEST_SCHEDULED'
   | 'PAYMENT_REPORT_NEW' | 'PAYMENT_REPORT_VERIFIED' | 'PAYMENT_REPORT_REJECTED' | 'CERTIFICATE_ISSUED' | 'MOVE_OUT_RECORDED';
 export interface NotificationItem {
   id: string;
@@ -203,6 +208,8 @@ export interface AnnouncementRow {
   category: AnnouncementCategory;
   isImportant: boolean;
   publishedAt: string;
+  endsAt?: string | null;
+  state?: 'SCHEDULED' | 'ACTIVE' | 'ENDED' | 'ARCHIVED';
   editedAt: string | null;
   author: string;
   archivedAt?: string | null;
@@ -213,7 +220,7 @@ export interface AnnouncementRow {
 export interface AnnouncementDetail extends AnnouncementRow {
   body: string;
   read: boolean | number;
-  audience?: { type: 'ALL' | 'OWNERS' | 'TENANTS' | 'FLOORS' | 'UNITS'; units: { id: string; unitNumber: string }[]; floors: number[] };
+  audience?: { type: 'ALL' | 'OWNERS' | 'TENANTS' | 'FLOORS' | 'UNITS' | 'GROUP'; units: { id: string; unitNumber: string }[]; floors: number[]; group: string | null };
 }
 
 export interface FinanceMonth {
@@ -250,7 +257,7 @@ export interface DashboardData {
     activity: ActivityEntry[] | null;
     announcements: { id: string; title: string; publishedAt: string; isImportant: boolean }[];
     payments: { id: string; amount: number; paidOn: string; receiptNo: string; billId: string; unitNumber: string }[];
-    requests: { id: string; number: number; title: string; status: RequestStatus; createdAt: string; unitNumber: string }[];
+    requests: { id: string; number: number; title: string; status: RequestStatus; createdAt: string; unitNumber: string | null }[];
   };
 }
 
@@ -381,7 +388,7 @@ export interface SearchResults {
   residents: { id: string; fullName: string; phone: string; isActive: boolean }[];
   units: { id: string; unitNumber: string; floor: number }[];
   bills: { id: string; unitNumber: string; billingMonth: string; kind: string; balance: number; status: BillStatus }[];
-  requests: { id: string; number: number; title: string; status: RequestStatus; unit: { unitNumber: string } }[];
+  requests: { id: string; number: number; title: string; status: RequestStatus; unit: { unitNumber: string } | null }[];
 }
 export interface MaintenanceReport {
   from: string;
@@ -389,6 +396,46 @@ export interface MaintenanceReport {
   total: number;
   byStatus: { status: RequestStatus; n: number }[];
   averageHours: number | null;
-  byCategory: { category: string; requests: number; resolved: number; averageHours: number | null }[];
+  overdue: number;
+  averageRating: number | null;
+  ratings: number;
+  byCategory: { category: string; requests: number; resolved: number; averageHours: number | null; averageRating: number | null }[];
+  byStaff: { id: string; fullName: string; ratings: number; averageRating: number | null }[];
   topUnits: { id: string; unitNumber: string; requests: number }[];
+}
+
+// ------------------------------------------------------------------ Sprint 7
+export interface EmergencyContact {
+  id: string;
+  name: string;
+  role: string;
+  phone: string;
+  hours: string;
+}
+export interface GroupRow {
+  id: string;
+  name: string;
+  members: number;
+}
+export interface GroupDetail {
+  id: string;
+  name: string;
+  members: { id: string; fullName: string; phone: string; isActive: boolean }[];
+}
+export interface ScheduledTask {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  intervalMonths: number;
+  nextDueDate: string;
+  defaultAssignee: { id: string; fullName: string } | null;
+  isPaused: boolean;
+}
+export interface UpcomingTask {
+  taskId: string;
+  title: string;
+  category: string;
+  dueDate: string;
+  assignee: string | null;
 }

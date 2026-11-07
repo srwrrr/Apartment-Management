@@ -17,10 +17,13 @@
     "build": "npm run build -w web && npm run build -w server",
     "test": "npm run test -w packages/shared && npm run test -w server && npm run test -w web",
     "db:migrate": "npm run db:migrate -w server",
+    "db:deploy": "npm run db:deploy -w server",
     "db:studio": "npm run db:studio -w server",
     "seed": "npm run seed -w server",
-    "lint": "eslint .",
-    "test:e2e": "playwright test"
+    "demo:reset": "npm run demo:reset -w server",
+    "app": "npm run build -w web && npm run serve -w server",
+    "test:e2e": "playwright test",
+    "test:pwa": "playwright test -c playwright.pwa.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

@@ -33,6 +33,35 @@ function usePeriod() {
   return { from, to, set };
 }
 
+/** FR-38. */
+function CsvLink({ href }: { href: string }) {
+  const { t } = useTranslation();
+  return (
+    <a href={href} download className="no-print inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+      {t('reports.exportCsv')}
+    </a>
+  );
+}
+
+/** FR-57. */
+function Committee() {
+  const { t } = useTranslation();
+  const { to } = usePeriod();
+  const [month, setMonth] = useState(to);
+  return (
+    <Card className="no-print mt-4">
+      <h2 className="mb-1 text-xl font-bold">{t('committee.title')}</h2>
+      <p className="mb-3 text-muted">{t('committee.help')}</p>
+      <div className="flex flex-wrap items-end gap-3">
+        <Field label={t('committee.month')}>{(p) => <TextInput {...p} type="month" value={month} onChange={(e) => setMonth(e.target.value)} />}</Field>
+        <a href={`/api/reports/committee.pdf?month=${month}`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700">
+          {t('committee.download')}
+        </a>
+      </div>
+    </Card>
+  );
+}
+
 function Finance() {
   const { t } = useTranslation();
   const { from, to, set } = usePeriod();
@@ -41,7 +70,10 @@ function Finance() {
 
   return (
     <Card>
-      <h2 className="mb-3 text-xl font-bold">{t('reports.finance')}</h2>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xl font-bold">{t('reports.finance')}</h2>
+        <CsvLink href={`/api/reports/finance.csv?from=${from}&to=${to}`} />
+      </div>
       <div className="mb-4 flex flex-wrap gap-4">
         <Field label={t('reports.from')}>{(p) => <TextInput {...p} type="month" value={from} onChange={(e) => set('from', e.target.value)} />}</Field>
         <Field label={t('reports.to')} error={fe.to}>
@@ -130,7 +162,10 @@ function Dues() {
   const q = useQuery({ queryKey: ['dues-report'], queryFn: () => api.get<DuesReport>('/api/reports/dues') });
   return (
     <Card className="mt-4">
-      <h2 className="mb-1 text-xl font-bold">{t('reports.dues')}</h2>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xl font-bold">{t('reports.dues')}</h2>
+        <CsvLink href="/api/reports/dues.csv" />
+      </div>
       {q.isLoading ? (
         <Spinner />
       ) : q.isError ? (
@@ -251,6 +286,7 @@ function Maintenance() {
   if (!q.data) return null;
   const r = q.data;
   const hours = (h: number | null) => (h === null ? '—' : t('maintenanceReport.hours', { hours: h }));
+  const stars = (s: number | null) => (s === null ? '—' : t('maintenanceReport.outOfFive', { rating: s }));
   return (
     <Card className="mt-4">
       <h2 className="mb-3 text-xl font-bold">{t('maintenanceReport.title')}</h2>
@@ -266,6 +302,14 @@ function Maintenance() {
             <div>
               <dt className="text-sm text-muted">{t('maintenanceReport.average')}</dt>
               <dd className="text-2xl font-bold" data-testid="mr-average">{r.averageHours === null ? t('maintenanceReport.noAverage') : hours(r.averageHours)}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted">{t('maintenanceReport.overdue')}</dt>
+              <dd className="text-2xl font-bold" data-testid="mr-overdue">{r.overdue}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted">{t('maintenanceReport.rating')}</dt>
+              <dd className="text-2xl font-bold" data-testid="mr-rating">{r.averageRating === null ? t('maintenanceReport.noRating') : stars(r.averageRating)}</dd>
             </div>
           </dl>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -301,6 +345,7 @@ function Maintenance() {
                   <th className="py-2 text-end">{t('maintenanceReport.requests')}</th>
                   <th className="py-2 text-end">{t('maintenanceReport.resolved')}</th>
                   <th className="py-2 text-end">{t('maintenanceReport.averageShort')}</th>
+                  <th className="py-2 text-end">{t('maintenanceReport.ratingShort')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -310,11 +355,27 @@ function Maintenance() {
                     <td className="py-2 text-end">{c.requests}</td>
                     <td className="py-2 text-end">{c.resolved}</td>
                     <td className="py-2 text-end">{hours(c.averageHours)}</td>
+                    <td className="py-2 text-end">{stars(c.averageRating)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </ScrollTable>
+          {r.byStaff.length > 0 && (
+            <>
+              <h3 className="mt-4 font-semibold">{t('maintenanceReport.byStaff')}</h3>
+              <ul data-testid="mr-staff">
+                {r.byStaff.map((s) => (
+                  <li key={s.id} className="flex justify-between gap-3 border-b border-line py-1">
+                    <span>{s.fullName}</span>
+                    <span>
+                      {stars(s.averageRating)} ({s.ratings})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       )}
     </Card>
@@ -369,6 +430,7 @@ export function ReportsPage() {
       <Dues />
       <IncomeExpense />
       <Maintenance />
+      <Committee />
       {user?.role === 'ADMIN' && <CertificateCheck />}
     </>
   );

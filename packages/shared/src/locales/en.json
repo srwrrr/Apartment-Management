@@ -67,7 +67,10 @@
     "statement": "Statement",
     "buildingSummary": "Building spending",
     "activity": "Activity log",
-    "search": "Search"
+    "search": "Search",
+    "groups": "Resident groups",
+    "emergency": "Emergency contacts",
+    "scheduledTasks": "Scheduled jobs"
   },
   "roles": {
     "RESIDENT": "Resident",
@@ -81,14 +84,17 @@
     "password": "Password",
     "signIn": "Log in",
     "signingIn": "Logging in…",
-    "demoNote": "Demo accounts",
     "changeTitle": "Change your password",
     "changeTempIntro": "You are using a temporary password. Choose your own password to continue.",
     "currentPassword": "Current password",
     "newPassword": "New password",
     "passwordHelp": "At least 8 characters, with a letter and a number.",
     "changed": "Your password was changed.",
-    "otherSessions": "You were logged out on your other devices."
+    "otherSessions": "You were logged out on your other devices.",
+    "demoTitle": "Demo mode: log in as",
+    "demoADMIN": "Administrator",
+    "demoSTAFF": "Staff member",
+    "demoRESIDENT": "Resident"
   },
   "home": {
     "welcome": "Welcome, {{name}}",
@@ -254,7 +260,11 @@
     "NOTHING_BILLED": "This unit has never been billed, so there is nothing to certify.",
     "STALE_PREVIEW": "The balance changed while you were working. Please review the details again.",
     "HAS_OTHER_OCCUPANCY": "This resident still lives in another unit, so the account stays active.",
-    "EXPENSE_VOIDED": "This expense was voided and can no longer be changed."
+    "EXPENSE_VOIDED": "This expense was voided and can no longer be changed.",
+    "ALREADY_RATED": "You have already rated this request.",
+    "RATING_CLOSED": "This request can no longer be rated.",
+    "ANNOUNCEMENT_ALREADY_SENT": "This announcement has already gone out, so its publish time cannot change.",
+    "OCCUPANCY_ENDED": "This stay has ended, so nobody can be added to it."
   },
   "fieldErrors": {
     "INVALID": "This value is not valid.",
@@ -297,7 +307,13 @@
     "NEW_BILLING_CONTACT_REQUIRED": "Choose who will receive the bills from now on.",
     "SPENT_ON_FUTURE": "The date cannot be in the future.",
     "INVALID_RESIDENT": "Choose someone who has lived in this unit.",
-    "RESIDENT_REQUIRED": "This unit has no billing contact. Choose a resident."
+    "RESIDENT_REQUIRED": "This unit has no billing contact. Choose a resident.",
+    "DATE_IN_PAST": "The date cannot be in the past.",
+    "ENDS_BEFORE_PUBLISH": "The end time must be after the publish time.",
+    "PUBLISH_IN_PAST": "The publish time must be in the future.",
+    "GROUP_NOT_FOUND": "Choose a group from the list.",
+    "GROUP_NAME_TAKEN": "A group with this name already exists.",
+    "EMERGENCY_PHONE_INVALID": "Enter a phone number, like 999 or 01712345678."
   },
   "directory": {
     "title": "Resident directory",
@@ -610,7 +626,9 @@
     "locationShortUNIT": "In the apartment",
     "locationShortCOMMON_AREA": "Shared area",
     "selectUnit": "Choose your apartment",
-    "reportedLabel": "Reported"
+    "reportedLabel": "Reported",
+    "scheduledJob": "Scheduled job",
+    "noUnit": "Common area"
   },
   "requestStatus": {
     "SUBMITTED": "Submitted",
@@ -659,7 +677,9 @@
       "PAYMENT_REPORT_VERIFIED": "Your payment of {{amount}} for unit {{unit}} was verified.",
       "PAYMENT_REPORT_REJECTED": "Your payment report of {{amount}} for unit {{unit}} was not accepted: {{reason}}",
       "CERTIFICATE_ISSUED": "No-dues certificate {{number}} was issued for unit {{unit}}.",
-      "MOVE_OUT_RECORDED": "Your stay in unit {{unit}} was recorded as ended on {{date}}."
+      "MOVE_OUT_RECORDED": "Your stay in unit {{unit}} was recorded as ended on {{date}}.",
+      "REQUEST_SCHEDULED": "Scheduled job #{{number}} is ready: {{title}}. Due by {{dueDate}}.",
+      "REQUEST_ASSIGNED_COMMON": "Job #{{number}} was assigned to you: {{title}}"
     }
   },
   "announcements": {
@@ -684,7 +704,8 @@
       "OWNERS": "Owners only",
       "TENANTS": "Tenants only",
       "FLOORS": "Chosen floors",
-      "UNITS": "Chosen units"
+      "UNITS": "Chosen units",
+      "GROUP": "A resident group"
     },
     "floors": "Floors",
     "floorsHelp": "Separate floor numbers with commas, e.g. 1, 2, 3.",
@@ -708,7 +729,25 @@
     "sentTo": "Sent to",
     "sentToUnits": "Units {{units}}",
     "sentToFloors": "Floors {{floors}}",
-    "unread": "New"
+    "unread": "New",
+    "group": "Group",
+    "chooseGroup": "Choose a group",
+    "noGroups": "There are no resident groups yet.",
+    "sentToGroup": "Group: {{name}}",
+    "groupDeleted": "a group that was later deleted",
+    "publishAt": "Publish at (optional)",
+    "publishAtHelp": "Leave empty to publish now. Nobody sees it or is told until this time.",
+    "endsAt": "End at (optional)",
+    "endsAtHelp": "After this time it moves to past announcements.",
+    "schedule": "Schedule",
+    "scheduled": "Scheduled",
+    "scheduledFor": "Goes out {{date}}",
+    "ended": "Ended",
+    "endsOn": "Ends {{date}}",
+    "current": "Current",
+    "past": "Past announcements",
+    "noPast": "No past announcements.",
+    "printNotice": "Print notice"
   },
   "dashboard": {
     "title": "Overview",
@@ -739,7 +778,10 @@
     "recentAnnouncements": "Latest announcements",
     "none": "Nothing yet.",
     "reports": "Reports",
-    "pendingReports": "{{count}} payment reports waiting to be checked"
+    "pendingReports": "{{count}} payment reports waiting to be checked",
+    "showTable": "Show as table",
+    "showChart": "Show as chart",
+    "trendSummary": "{{month}}: billed {{billed}}, collected {{collected}}, rate {{rate}}"
   },
   "reports": {
     "title": "Reports",
@@ -765,7 +807,8 @@
     "noDues": "No unit owes anything.",
     "noContact": "No billing contact",
     "print": "Print",
-    "total": "Total"
+    "total": "Total",
+    "exportCsv": "Export to CSV"
   },
   "paymentReports": {
     "title": "Payment reports",
@@ -1029,15 +1072,37 @@
       "request": {
         "status": "Changed a request’s status",
         "assign": "Assigned a request",
-        "priority": "Set a request’s priority"
+        "priority": "Set a request’s priority",
+        "rate": "Rated a request",
+        "scheduled": "Created a scheduled job"
       },
       "announcement": {
         "publish": "Published an announcement",
         "update": "Edited an announcement",
-        "archive": "Archived an announcement"
+        "archive": "Archived an announcement",
+        "schedule": "Scheduled an announcement"
       },
       "settings": {
         "update": "Changed settings"
+      },
+      "group": {
+        "create": "Created a resident group",
+        "update": "Renamed a resident group",
+        "delete": "Deleted a resident group",
+        "members": "Changed a group’s members"
+      },
+      "emergency_contacts": {
+        "update": "Changed the emergency contacts"
+      },
+      "household": {
+        "add": "Added a household member",
+        "remove": "Removed a household member"
+      },
+      "scheduled_task": {
+        "create": "Added a scheduled job",
+        "update": "Edited a scheduled job",
+        "pause": "Paused a scheduled job",
+        "resume": "Resumed a scheduled job"
       }
     }
   },
@@ -1054,6 +1119,159 @@
     "requests": "Requests",
     "resolved": "Resolved",
     "averageShort": "Average",
-    "none": "No requests in this period."
+    "none": "No requests in this period.",
+    "rating": "Average rating",
+    "noRating": "No ratings yet",
+    "ratingShort": "Rating",
+    "outOfFive": "{{rating}} / 5",
+    "overdue": "Past their deadline",
+    "byStaff": "Ratings by staff member",
+    "staff": "Staff member",
+    "ratings": "Ratings"
+  },
+  "groups": {
+    "title": "Resident groups",
+    "help": "Use a group to send an announcement to the same people each time, such as the committee.",
+    "new": "New group",
+    "name": "Group name",
+    "create": "Create group",
+    "rename": "Rename",
+    "delete": "Delete group",
+    "confirmDelete": "Delete this group? Announcements already sent to it stay as they are.",
+    "empty": "No groups yet.",
+    "memberCount": "{{count}} members",
+    "open": "Open",
+    "members": "Members",
+    "noMembers": "Nobody is in this group yet.",
+    "search": "Search residents to add",
+    "add": "Add {{name}}",
+    "remove": "Remove {{name}}",
+    "inactive": "Inactive",
+    "oneMember": "1 member"
+  },
+  "emergency": {
+    "title": "Emergency contacts",
+    "help": "Tap a number to call it. This page still opens without internet once you have seen it.",
+    "manageHelp": "Everyone can see this list. Changes are saved when you press Save.",
+    "empty": "No emergency contacts have been added yet.",
+    "name": "Name",
+    "role": "Role",
+    "phone": "Phone",
+    "hours": "Available",
+    "add": "Add a contact",
+    "remove": "Remove {{name}}",
+    "moveUp": "Move {{name}} up",
+    "moveDown": "Move {{name}} down",
+    "contact": "Contact {{number}}",
+    "call": "Call {{name}}",
+    "saved": "Saved."
+  },
+  "scheduled": {
+    "title": "Scheduled jobs",
+    "help": "Routine work that repeats. A request is created 7 days before each due date.",
+    "new": "New scheduled job",
+    "fieldTitle": "Job",
+    "fieldDescription": "What needs doing",
+    "category": "Category",
+    "interval": "Repeat every (months)",
+    "nextDue": "Next due date",
+    "assignee": "Assign to",
+    "noAssignee": "Nobody yet",
+    "every": "Every {{count}} months",
+    "nextOn": "Next due {{date}}",
+    "pause": "Pause",
+    "resume": "Resume",
+    "paused": "Paused",
+    "upcoming": "Due in the next 90 days",
+    "noneUpcoming": "Nothing is due in the next 90 days.",
+    "empty": "No scheduled jobs yet.",
+    "edit": "Edit scheduled job",
+    "everyMonth": "Every month"
+  },
+  "household": {
+    "title": "Household members",
+    "help": "Family members get their own login. They see what this resident sees, but never become the billing contact.",
+    "add": "Add a household member",
+    "name": "Full name",
+    "relation": "Relation",
+    "relationHelp": "For example: wife, son.",
+    "loginId": "Login ID (email or mobile)",
+    "phone": "Phone (optional)",
+    "remove": "Remove",
+    "confirmRemove": "Remove {{name}} from this household? They will no longer be able to log in. Their history stays.",
+    "none": "No household members.",
+    "removed": "Removed"
+  },
+  "rating": {
+    "title": "How did we do?",
+    "help": "Your rating helps the building team. It cannot be changed afterwards.",
+    "stars": "Stars",
+    "star": "{{count}} out of 5",
+    "comment": "Comment (optional)",
+    "submit": "Send rating",
+    "yours": "Your rating",
+    "given": "Resident’s rating"
+  },
+  "committee": {
+    "title": "Monthly committee report",
+    "download": "Download PDF",
+    "help": "One PDF for the committee meeting, in your chosen language.",
+    "month": "Month",
+    "occupancy": "Occupancy",
+    "totalUnits": "Total units",
+    "occupied": "Occupied",
+    "vacant": "Vacant",
+    "billing": "Billing",
+    "billed": "Billed",
+    "collected": "Collected",
+    "rate": "Collection rate",
+    "noRate": "Nothing billed",
+    "outstanding": "Outstanding",
+    "trend": "Last 6 months",
+    "topDues": "Units with the highest dues",
+    "noDues": "No unit owes anything.",
+    "unit": "Unit",
+    "contact": "Billing contact",
+    "owed": "Owed",
+    "expenses": "Income and expenses",
+    "noExpenses": "No expenses were recorded this month.",
+    "income": "Money received",
+    "totalExpenses": "Money spent",
+    "net": "Net result",
+    "maintenance": "Maintenance",
+    "opened": "Requests opened",
+    "resolved": "Resolved",
+    "overdue": "Overdue",
+    "average": "Average time to resolve",
+    "noAverage": "None resolved yet",
+    "hours": "{{hours}} hours",
+    "rating": "Average rating",
+    "noRating": "No ratings yet",
+    "announcements": "Announcements",
+    "published": "Published this month",
+    "note": "Occupancy and dues are as of the day this report was made. Collected follows the month of each bill; money received follows the day it was paid."
+  },
+  "csv": {
+    "number": "Number",
+    "title": "Title",
+    "category": "Category",
+    "status": "Status",
+    "priority": "Priority",
+    "unit": "Unit",
+    "submittedBy": "Submitted by",
+    "assignedTo": "Assigned to",
+    "created": "Created",
+    "resolved": "Resolved",
+    "month": "Month",
+    "bills": "Bills",
+    "billed": "Billed (BDT)",
+    "collected": "Collected (BDT)",
+    "outstanding": "Outstanding (BDT)",
+    "rate": "Rate (%)",
+    "contact": "Billing contact",
+    "phone": "Phone",
+    "owed": "Owed (BDT)",
+    "overdueBills": "Overdue bills",
+    "oldestOverdue": "Oldest overdue"
   }
 }

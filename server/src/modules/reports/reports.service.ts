@@ -107,7 +107,7 @@ export async function maintenanceReport(from: string, to: string) {
   const end = `${addMonths(to, 1)}-01T00:00:00+06:00`;
   const period = Prisma.sql`r."createdAt" >= ${start}::timestamptz AND r."createdAt" < ${end}::timestamptz`;
 
-  const [byStatus, byCategory, topUnits] = await Promise.all([
+  const [byStatus, byCategory, topUnits, ratingsByCategory, ratingsByStaff] = await Promise.all([
     prisma.$queryRaw<{ status: string; n: number }[]>`
       SELECT r.status::text AS status, COUNT(*)::int AS n FROM "maintenance_requests" r WHERE ${period} GROUP BY 1 ORDER BY 1`,
     prisma.$queryRaw<{ category: string; n: number; resolved: number; hours: number | null }[]>`
@@ -118,10 +118,21 @@ export async function maintenanceReport(from: string, to: string) {
       SELECT u.id::text AS id, u."unitNumber", COUNT(*)::int AS n
       FROM "maintenance_requests" r JOIN "units" u ON u.id = r."unitId" WHERE ${period}
       GROUP BY u.id ORDER BY n DESC, u."unitNumber" LIMIT 5`,
+    prisma.$queryRaw<{ category: string; stars: number }[]>`
+      SELECT r.category::text AS category, AVG(rt.stars)::float8 AS stars
+      FROM request_ratings rt JOIN "maintenance_requests" r ON r.id = rt."requestId" WHERE ${period} GROUP BY 1`,
+    prisma.$queryRaw<{ id: string; fullName: string; n: number; stars: number }[]>`
+      SELECT u.id::text AS id, u."fullName", COUNT(*)::int AS n, AVG(rt.stars)::float8 AS stars
+      FROM request_ratings rt JOIN "maintenance_requests" r ON r.id = rt."requestId" JOIN "users" u ON u.id = r."assignedToId"
+      WHERE ${period} GROUP BY u.id ORDER BY stars DESC, u."fullName"`,
   ]);
-  const [overall] = await prisma.$queryRaw<{ hours: number | null }[]>`
-    SELECT (AVG(EXTRACT(EPOCH FROM (r."resolvedAt" - r."createdAt"))) / 3600)::float8 AS hours
-    FROM "maintenance_requests" r WHERE ${period}`;
+  const [overall] = await prisma.$queryRaw<{ hours: number | null; stars: number | null; rated: number; overdue: number }[]>`
+    SELECT (AVG(EXTRACT(EPOCH FROM (r."resolvedAt" - r."createdAt"))) / 3600)::float8 AS hours,
+           AVG(rt.stars)::float8 AS stars, COUNT(rt.stars)::int AS rated,
+           (COUNT(*) FILTER (WHERE r.status IN ('SUBMITTED', 'UNDER_REVIEW', 'IN_PROGRESS') AND r."dueAt" < now()))::int AS overdue
+    FROM "maintenance_requests" r LEFT JOIN request_ratings rt ON rt."requestId" = r.id WHERE ${period}`;
+  const stars = (s: number | null | undefined) => (s === null || s === undefined ? null : Math.round(s * 10) / 10);
+  const categoryStars = new Map(ratingsByCategory.map((c) => [c.category, stars(c.stars)]));
 
   const hours = (h: number | null | undefined) => (h === null || h === undefined ? null : Math.round(h * 10) / 10);
   return {
@@ -130,7 +141,11 @@ export async function maintenanceReport(from: string, to: string) {
     total: byStatus.reduce((s, r) => s + r.n, 0),
     byStatus,
     averageHours: hours(overall?.hours),
-    byCategory: byCategory.map((c) => ({ category: c.category, requests: c.n, resolved: c.resolved, averageHours: hours(c.hours) })),
+    overdue: overall?.overdue ?? 0,
+    averageRating: stars(overall?.stars),
+    ratings: overall?.rated ?? 0,
+    byCategory: byCategory.map((c) => ({ category: c.category, requests: c.n, resolved: c.resolved, averageHours: hours(c.hours), averageRating: categoryStars.get(c.category) ?? null })),
+    byStaff: ratingsByStaff.map((s) => ({ id: s.id, fullName: s.fullName, ratings: s.n, averageRating: stars(s.stars) })),
     topUnits: topUnits.map((u) => ({ id: u.id, unitNumber: u.unitNumber, requests: u.n })),
   };
 }
@@ -147,6 +162,8 @@ export async function dashboard(month: string = currentMonthDhaka(), opts: { act
            (SELECT COUNT(*)::int FROM "users" WHERE role = 'RESIDENT' AND "isActive") AS residents`;
 
   const [thisMonth, trend] = await Promise.all([financeReport(month, month), financeReport(addMonths(month, -5), month)]);
+  const [opening] = await prisma.$queryRaw<{ outstanding: bigint }[]>`
+    SELECT COALESCE(SUM(balance), 0)::bigint AS outstanding FROM bill_summary WHERE kind = 'OPENING_BALANCE'`;
   const [overdue] = await prisma.$queryRaw<{ n: number; amount: bigint }[]>`
     SELECT COUNT(*)::int AS n, COALESCE(SUM(balance), 0)::bigint AS amount FROM bill_summary WHERE status = 'OVERDUE'`;
 
@@ -157,7 +174,7 @@ export async function dashboard(month: string = currentMonthDhaka(), opts: { act
   const overdueRequests = await prisma.maintenanceRequest.count({ where: { status: { in: ['SUBMITTED', 'UNDER_REVIEW', 'IN_PROGRESS'] }, dueAt: { lt: new Date() } } });
 
   const [announcements, payments, requests] = await Promise.all([
-    prisma.announcement.findMany({ where: { archivedAt: null }, orderBy: { publishedAt: 'desc' }, take: 5, select: { id: true, title: true, publishedAt: true, isImportant: true } }),
+    prisma.announcement.findMany({ where: { archivedAt: null, recipientsResolvedAt: { not: null } }, orderBy: { publishedAt: 'desc' }, take: 5, select: { id: true, title: true, publishedAt: true, isImportant: true } }),
     prisma.payment.findMany({
       where: { voidedAt: null },
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
@@ -183,7 +200,8 @@ export async function dashboard(month: string = currentMonthDhaka(), opts: { act
       collected: m.collected,
       outstanding: m.outstanding,
       rate: m.rate,
-      openingBalances: thisMonth.openingBalances,
+      // All of it, whichever month is chosen: these dues are from before the system, so they belong to no month here.
+      openingBalances: { outstanding: num(opening!.outstanding) },
       overdueBills: overdue!.n,
       overdueAmount: num(overdue!.amount),
       pendingReports,
@@ -201,7 +219,7 @@ export async function dashboard(month: string = currentMonthDhaka(), opts: { act
       activity,
       announcements: announcements.map((a) => ({ id: a.id, title: a.title, publishedAt: a.publishedAt, isImportant: a.isImportant })),
       payments: payments.map((p) => ({ id: p.id, amount: p.amount, paidOn: p.paidOn.toISOString().slice(0, 10), receiptNo: p.receiptNo, billId: p.billId, unitNumber: p.bill.unit.unitNumber })),
-      requests: requests.map((r) => ({ id: r.id, number: r.number, title: r.title, status: r.status, createdAt: r.createdAt, unitNumber: r.unit.unitNumber })),
+      requests: requests.map((r) => ({ id: r.id, number: r.number, title: r.title, status: r.status, createdAt: r.createdAt, unitNumber: r.unit?.unitNumber ?? null })),
     },
   };
 }

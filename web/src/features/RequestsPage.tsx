@@ -31,8 +31,9 @@ function RequestItem({ r, showSubmitter }: { r: RequestRow; showSubmitter?: bool
           </span>
         </span>
         <span className="mt-1 block text-sm text-muted">
-          {t('maintenance.unit')} {r.unit.unitNumber} · {t(`requestCategory.${r.category}`, { defaultValue: r.category })} · {formatDate(r.createdAt)}
+          {r.unit ? `${t('maintenance.unit')} ${r.unit.unitNumber}` : t('maintenance.noUnit')} · {t(`requestCategory.${r.category}`, { defaultValue: r.category })} · {formatDate(r.createdAt)}
           {showSubmitter && r.submittedBy ? ` · ${r.submittedBy}` : ''}
+          {r.scheduled ? ` · ${t('maintenance.scheduledJob')}` : ''}
           {who ? ` · ${t('maintenance.assignedTo')}: ${who}` : ''}
         </span>
       </Link>
@@ -117,6 +118,8 @@ function AllRequests() {
   if (search) params.set('q', search);
   if (f.from) params.set('from', f.from);
   if (f.to) params.set('to', f.to);
+  const exportParams = new URLSearchParams(params);
+  exportParams.delete('page');
   const list = useQuery({ queryKey: ['requests', params.toString()], queryFn: () => api.get<Page<RequestRow>>(`/api/requests?${params}`) });
 
   const quick = (label: string, active: boolean, apply: () => void) => (
@@ -127,7 +130,11 @@ function AllRequests() {
 
   return (
     <>
-      <PageHeader title={t('maintenance.title')} />
+      <PageHeader title={t('maintenance.title')}>
+        <a href={`/api/requests/export.csv?${exportParams}`} download className="inline-flex min-h-11 items-center rounded-lg border border-line px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50">
+          {t('reports.exportCsv')}
+        </a>
+      </PageHeader>
       <div className="mb-3 flex flex-wrap gap-2">
         {quick(t('maintenance.newOnly'), f.status === 'SUBMITTED' && f.sort === 'oldest', () => set({ ...emptyFilters, status: 'SUBMITTED', sort: 'oldest' }))}
         {quick(t('maintenance.overdueOnly'), f.overdue, () => set({ ...emptyFilters, overdue: true }))}

@@ -46,6 +46,45 @@ test('FR-48 without internet a friendly page appears, in both languages, instead
   await expect(page.getByLabel('Email or mobile number')).toBeVisible(); // back in the app
 });
 
+test('FR-52 emergency numbers open without internet once they have been seen, and can be tapped', async ({ page, context }) => {
+  await page.goto('/login');
+  await controlled(page);
+  await login(page);
+  await page.goto('/emergency');
+  await page.getByRole('button', { name: 'Add a contact' }).click();
+  await page.getByLabel('Name').fill('Guard desk');
+  await page.getByLabel('Role').fill('Security');
+  await page.getByLabel('Phone').fill('01712345678');
+  await page.getByLabel('Available').fill('24 hours');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByTestId('emergency-contact')).toHaveCount(1);
+  await page.reload(); // this load is the one the phone keeps
+  await expect(page.getByTestId('emergency-contact')).toHaveCount(1);
+  await page.waitForLoadState('networkidle');
+
+  await context.setOffline(true);
+  await page.goto('/emergency');
+  await expect(page.getByRole('heading', { name: 'You are offline' })).toBeVisible();
+  await expect(page.getByText('Guard desk (Security)')).toBeVisible();
+  await expect(page.getByRole('link', { name: '01712345678' })).toHaveAttribute('href', 'tel:01712345678');
+});
+
+test('the built site runs under its real security policy, and its routes work when opened directly', async ({ page }) => {
+  const blocked: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error' && /Content Security Policy/i.test(m.text())) blocked.push(m.text());
+  });
+  const res = await page.goto('/login');
+  expect(res!.headers()['content-security-policy']).toContain("default-src 'self'");
+  expect(res!.headers()['content-security-policy']).not.toContain('upgrade-insecure-requests');
+  await login(page);
+  const direct = await page.goto('/reports');
+  expect(direct!.status()).toBe(200);
+  await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible();
+  expect((await page.request.get('/api/nothing-here')).status()).toBe(404);
+  expect(blocked).toEqual([]);
+});
+
 test('FR-48 nothing private is stored on the device', async ({ page, context }) => {
   await page.goto('/login');
   await controlled(page);
@@ -62,6 +101,16 @@ test('FR-48 nothing private is stored on the device', async ({ page, context }) 
   });
   expect(stored.length).toBeGreaterThan(0); // the app's own files are there
   expect(stored.filter((u) => u.includes('/api/'))).toEqual([]);
+
+  // The emergency numbers are the one exception (FR-52), and only after that page has been opened.
+  await page.goto('/emergency');
+  await page.waitForLoadState('networkidle');
+  const afterEmergency = await page.evaluate(async () => {
+    const urls: string[] = [];
+    for (const name of await caches.keys()) for (const r of await (await caches.open(name)).keys()) urls.push(new URL(r.url).pathname);
+    return urls.filter((u) => u.startsWith('/api/'));
+  });
+  expect(afterEmergency).toEqual(['/api/emergency-contacts']);
 
   // Offline, a data request fails rather than being answered from the device.
   await context.setOffline(true);

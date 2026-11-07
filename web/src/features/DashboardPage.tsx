@@ -3,10 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { formatBDT } from '@apt/shared';
-import { Card, Chip, Field, Notice, Spinner, TextInput } from '../components/ui';
+import { Button, Card, Chip, Field, Notice, ScrollTable, Spinner, TextInput } from '../components/ui';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/errors';
-import { formatDate, monthLabel, thisMonth } from '../lib/format';
+import { formatDate, monthLabel, monthShort, thisMonth } from '../lib/format';
 import type { DashboardData } from '../lib/types';
 import { ActivityRow } from './ActivityPage';
 
@@ -20,6 +20,75 @@ function Stat({ label, value, id, tone }: { label: string; value: string | numbe
         {value}
       </p>
     </div>
+  );
+}
+
+// Checked with the palette validator: they stay apart for colour-blind readers and against the white card.
+const BILLED = '#c0701a';
+const COLLECTED = '#00806a';
+
+/** FR-58: billed against collected on one scale, with the rate under each month, and the same numbers as a table. */
+function Trend({ months }: { months: DashboardData['trend'] }) {
+  const { t } = useTranslation();
+  const [asTable, setAsTable] = useState(false);
+  const max = Math.max(...months.map((m) => m.billed), 1);
+  const height = (v: number) => `${(v / max) * 100}%`;
+  return (
+    <>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xl font-bold">{t('dashboard.trend')}</h2>
+        <Button variant="secondary" aria-pressed={asTable} onClick={() => setAsTable(!asTable)}>
+          {asTable ? t('dashboard.showChart') : t('dashboard.showTable')}
+        </Button>
+      </div>
+      {asTable ? (
+        <ScrollTable label={t('dashboard.trend')}>
+          <table className="w-full min-w-[30rem]" data-testid="trend-table">
+            <thead>
+              <tr className="border-b border-line text-sm text-muted">
+                <th className="py-2 text-start">{t('dashboard.month')}</th>
+                <th className="py-2 text-end">{t('dashboard.billed')}</th>
+                <th className="py-2 text-end">{t('dashboard.collected')}</th>
+                <th className="py-2 text-end">{t('dashboard.rate')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {months.map((m) => (
+                <tr key={m.month} className="border-b border-line">
+                  <td className="py-2">{monthLabel(m.month)}</td>
+                  <td className="py-2 text-end">{formatBDT(m.billed)}</td>
+                  <td className="py-2 text-end">{formatBDT(m.collected)}</td>
+                  <td className="py-2 text-end font-semibold">{pct(m.rate)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ScrollTable>
+      ) : (
+        <>
+          <p className="mb-2 flex flex-wrap gap-4 text-sm">
+            <span><span className="me-1 inline-block size-3 rounded-sm" style={{ background: BILLED }} aria-hidden="true" />{t('dashboard.billed')}</span>
+            <span><span className="me-1 inline-block size-3 rounded-sm" style={{ background: COLLECTED }} aria-hidden="true" />{t('dashboard.collected')}</span>
+          </p>
+          <ul className="grid grid-cols-6 gap-1 sm:gap-3" data-testid="trend">
+            {months.map((m) => {
+              const summary = t('dashboard.trendSummary', { month: monthLabel(m.month), billed: formatBDT(m.billed), collected: formatBDT(m.collected), rate: pct(m.rate) });
+              return (
+                <li key={m.month} title={summary} className="min-w-0 text-center">
+                  <span className="sr-only">{summary}</span>
+                  <span className="flex h-36 items-end justify-center gap-0.5 border-b border-ink" aria-hidden="true">
+                    <span className="w-1/3 max-w-5 rounded-t" style={{ height: height(m.billed), background: BILLED }} />
+                    <span className="w-1/3 max-w-5 rounded-t" style={{ height: height(m.collected), background: COLLECTED }} />
+                  </span>
+                  <span className="mt-1 block text-xs text-muted" aria-hidden="true">{monthShort(m.month)}</span>
+                  <span className="block text-sm font-semibold" aria-hidden="true">{pct(m.rate)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </>
   );
 }
 
@@ -106,18 +175,7 @@ export function Dashboard() {
           </div>
 
           <Card>
-            <h2 className="mb-3 text-xl font-bold">{t('dashboard.trend')}</h2>
-            <ul className="space-y-2" data-testid="trend">
-              {q.data!.trend.map((m) => (
-                <li key={m.month} className="grid grid-cols-[6.5rem_1fr_4rem] items-center gap-3">
-                  <span className="text-sm">{monthLabel(m.month)}</span>
-                  <span className="h-4 overflow-hidden rounded bg-gray-200" aria-hidden="true">
-                    <span className="block h-full bg-brand-600" style={{ width: `${Math.min(100, m.rate ?? 0)}%` }} />
-                  </span>
-                  <span className="text-end text-sm font-semibold">{pct(m.rate)}</span>
-                </li>
-              ))}
-            </ul>
+            <Trend months={q.data!.trend} />
           </Card>
 
           {q.data!.recent.activity && (
@@ -162,7 +220,7 @@ export function Dashboard() {
                   {q.data!.recent.requests.map((r) => (
                     <li key={r.id}>
                       <Link to={`/requests/${r.id}`} className="block hover:underline">
-                        #{r.number} · {r.unitNumber} · {r.title} <Chip>{t(`requestStatus.${r.status}`)}</Chip>
+                        #{r.number} · {r.unitNumber ?? t('maintenance.noUnit')} · {r.title} <Chip>{t(`requestStatus.${r.status}`)}</Chip>
                       </Link>
                     </li>
                   ))}

@@ -37,6 +37,17 @@ const regenerate = (req: Express.Request) =>
 const save = (req: Express.Request) =>
   new Promise<void>((resolve, reject) => req.session.save((e) => (e ? reject(e) : resolve())));
 
+// Demo mode (spec §12) fills in the login form for a presentation. It is never on in production.
+const DEMO_ACCOUNTS = [
+  { role: 'ADMIN', loginId: 'admin@demo.local', password: 'Admin1234' },
+  { role: 'STAFF', loginId: 'manager@demo.local', password: 'Manager1234' },
+  { role: 'RESIDENT', loginId: 'resident@demo.local', password: 'Resident1234' },
+];
+export const demoAccountsFor = (c: { DEMO_MODE: boolean; NODE_ENV: string }) => (c.DEMO_MODE && c.NODE_ENV !== 'production' ? DEMO_ACCOUNTS : []);
+authRouter.get('/demo-accounts', (_req, res) => {
+  res.json({ items: demoAccountsFor(config) });
+});
+
 authRouter.get('/csrf', (req, res) => {
   res.json({ csrfToken: ensureCsrfToken(req) });
 });

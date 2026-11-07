@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../app/auth';
 import { LanguageSwitch, TextSizeSwitch } from '../components/Preferences';
 import { Button, Card, Field, Notice, TextInput } from '../components/ui';
+import { api } from '../lib/api';
 import { errorMessage } from '../lib/errors';
 
 export function LoginPage() {
@@ -16,12 +18,19 @@ export function LoginPage() {
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
+  // Demo mode only (spec §12). The server sends nothing here unless it is switched on.
+  const demo = useQuery({ queryKey: ['demo-accounts'], queryFn: () => api.get<{ items: { role: 'ADMIN' | 'STAFF' | 'RESIDENT'; loginId: string; password: string }[] }>('/api/auth/demo-accounts'), retry: false, staleTime: Infinity });
+
   async function submit(e: FormEvent) {
     e.preventDefault();
+    await signIn(loginId, password);
+  }
+
+  async function signIn(id: string, pw: string) {
     setBusy(true);
     setError(null);
     try {
-      const { mustChangePassword } = await login(loginId, password);
+      const { mustChangePassword } = await login(id, pw);
       navigate(mustChangePassword ? '/change-password' : from, { replace: true });
     } catch (err) {
       setError(err);
@@ -57,10 +66,17 @@ export function LoginPage() {
           </Button>
         </form>
       </Card>
-      {import.meta.env.DEV && (
-        <p className="text-center text-sm text-muted">
-          {t('auth.demoNote')}: admin@demo.local / Admin1234 · staff@demo.local / Staff1234 · office@demo.local / Office1234
-        </p>
+      {!!demo.data?.items.length && (
+        <Card>
+          <h2 className="mb-2 font-semibold">{t('auth.demoTitle')}</h2>
+          <div className="flex flex-wrap gap-2">
+            {demo.data.items.map((a) => (
+              <Button key={a.role} variant="secondary" disabled={busy} onClick={() => void signIn(a.loginId, a.password)}>
+                {t(`auth.demo${a.role}`)}
+              </Button>
+            ))}
+          </div>
+        </Card>
       )}
     </div>
   );

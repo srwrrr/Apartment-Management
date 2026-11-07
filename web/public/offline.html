@@ -10,6 +10,11 @@
       main { padding: 24px; max-width: 26rem; }
       h1 { margin: 0 0 8px; font-size: 1.6rem; color: #0f5c4d; }
       p { margin: 0 0 20px; }
+      #contacts { margin-top: 28px; text-align: start; }
+      #contacts h2 { margin: 0 0 8px; font-size: 1.2rem; color: #0f5c4d; }
+      #contacts ul { list-style: none; margin: 0; padding: 0; }
+      #contacts li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; padding: 8px 0; border-top: 1px solid #d5dedb; }
+      #contacts a { color: #0b5546; font-weight: 700; }
       button { min-height: 44px; padding: 8px 24px; border: 0; border-radius: 8px; background: #0f5c4d; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
     </style>
   </head>
@@ -19,7 +24,12 @@
       <p>Check your internet connection and try again.</p>
       <h1 lang="bn">আপনি অফলাইনে আছেন</h1>
       <p lang="bn">আপনার ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।</p>
-      <button type="button" onclick="location.reload()">Try again / আবার চেষ্টা করুন</button>
+      <button type="button" id="retry">Try again / আবার চেষ্টা করুন</button>
+      <section id="contacts" hidden>
+        <h2>Emergency contacts / জরুরি যোগাযোগ</h2>
+        <ul id="contacts-list"></ul>
+      </section>
     </main>
+    <script src="/offline.js"></script>
   </body>
 </html>
