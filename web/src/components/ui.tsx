@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -66,6 +66,7 @@ const inputClass =
 
 export const TextInput = (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} className={`${inputClass} ${props.className ?? ''}`} />;
 export const Select = (props: SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} className={`${inputClass} ${props.className ?? ''}`} />;
+export const TextArea = (props: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea rows={4} {...props} className={`${inputClass} ${props.className ?? ''}`} />;
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <section className={`rounded-xl border border-line bg-surface p-4 shadow-sm sm:p-6 ${className}`}>{children}</section>;

@@ -4,6 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { BillDetailPage } from '../features/BillDetailPage';
 import { BillsPage } from '../features/BillsPage';
 import { ChangePasswordPage } from '../features/ChangePasswordPage';
+import { NewRequestPage } from '../features/NewRequestPage';
+import { RequestDetailPage } from '../features/RequestDetailPage';
+import { RequestsPage } from '../features/RequestsPage';
 import { FeesPage } from '../features/FeesPage';
 import { GenerateBillsPage } from '../features/GenerateBillsPage';
 import { SettingsPage } from '../features/SettingsPage';
@@ -62,6 +65,9 @@ export function App() {
         <Route path="bills" element={<RequireAccess anyOf={BILL_READ_PERMISSIONS} orRole="RESIDENT"><BillsPage /></RequireAccess>} />
         <Route path="bills/generate" element={<RequireAccess anyOf={['billing.manage']}><GenerateBillsPage /></RequireAccess>} />
         <Route path="bills/:id" element={<RequireAccess anyOf={BILL_READ_PERMISSIONS} orRole="RESIDENT"><BillDetailPage /></RequireAccess>} />
+        <Route path="requests" element={<RequestsPage />} />
+        <Route path="requests/new" element={<RequireAccess role="RESIDENT"><NewRequestPage /></RequireAccess>} />
+        <Route path="requests/:id" element={<RequestDetailPage />} />
         <Route path="fees" element={<RequireAccess anyOf={['billing.manage']}><FeesPage /></RequireAccess>} />
         <Route path="settings" element={<RequireAccess role="ADMIN"><SettingsPage /></RequireAccess>} />
         <Route path="directory" element={<RequireAccess anyOf={['directory.view']}><DirectoryPage /></RequireAccess>} />

@@ -21,6 +21,7 @@ async function user(loginId: string, fullName: string, role: Role, password: str
 async function main() {
   await user('admin@demo.local', 'Demo Admin', 'ADMIN', 'Admin1234');
   await user('staff@demo.local', 'Demo Caretaker', 'STAFF', 'Staff1234'); // no extra permissions
+  await user('manager@demo.local', 'Demo Maintenance Manager', 'STAFF', 'Manager1234', ['maintenance.view_all', 'maintenance.review', 'maintenance.assign']);
   await user('billing@demo.local', 'Demo Cashier', 'STAFF', 'Billing1234', ['billing.manage', 'billing.view', 'payments.record']);
   await user('viewer@demo.local', 'Demo Bill Viewer', 'STAFF', 'Viewer1234', ['billing.view']); // can look, not change
   await user('office@demo.local', 'Demo Office Staff', 'STAFF', 'Office1234', ['units.manage', 'residents.manage', 'directory.view']);
@@ -33,7 +34,7 @@ async function main() {
   for (const [key, value] of Object.entries(settings)) {
     await prisma.setting.upsert({ where: { key }, update: {}, create: { key, value } });
   }
-  console.log('Seeded: admin@demo.local / Admin1234, staff@demo.local / Staff1234, office@demo.local / Office1234, billing@demo.local / Billing1234, viewer@demo.local / Viewer1234');
+  console.log('Seeded: admin@demo.local / Admin1234, staff@demo.local / Staff1234, office@demo.local / Office1234, billing@demo.local / Billing1234, viewer@demo.local / Viewer1234, manager@demo.local / Manager1234');
 }
 
 main().finally(() => prisma.$disconnect());

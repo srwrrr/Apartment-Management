@@ -30,6 +30,15 @@ export function monthLabel(value: string): string {
 /** 'YYYY-MM' for this month in Dhaka, for <input type="month">. */
 export const thisMonth = (): string => todayYmd().slice(0, 7);
 
+/** "07 Nov 2026, 14:30" in Dhaka time, with Western digits (BR-28). */
+export function formatDateTime(value: string | Date | null | undefined): string {
+  if (!value) return '';
+  const date = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return '';
+  const locale = currentLang() === 'bn' ? 'bn-BD-u-nu-latn' : 'en-GB';
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Dhaka' }).format(date);
+}
+
 /** Poisha as a plain taka string for an input box: 300000 -> "3000", 250050 -> "2500.50". */
 export function takaString(poisha: number): string {
   const s = (poisha / 100).toFixed(2);

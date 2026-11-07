@@ -374,7 +374,9 @@ Screenshot is an `Attachment` row. Index `(status, createdAt)` for the queue.
 
 Overdue = open status and `now() > dueAt`.
 
-**RequestUpdate** — append-only: `id, requestId, authorId null (null = System), kind (NOTE | STATUS_CHANGE | PRIORITY_CHANGE | ASSIGNMENT), fromValue, toValue, note, isInternal, createdAt`.
+**RequestUpdate** — append-only: `id, seq, requestId, authorId null (null = System), kind (NOTE | STATUS_CHANGE | PRIORITY_CHANGE | ASSIGNMENT), fromValue, toValue, note, isInternal, createdAt`. `seq` is an insertion counter: rows written in one transaction share a timestamp, so the timeline is ordered by `seq`, not `createdAt`. For an assignment, `fromValue`/`toValue` hold the staff members' names at that time.
+
+**Built in Sprint 3** (differences from the plan above): residents' and staff lists are `/me/requests` and `/me/tasks`; the scheduled-task source and ratings (FR-49, FR-50) are not built yet, so those columns are not in the table; a request is visible to its submitter and anyone in the same household (`household_peers` view); staff without maintenance permissions see only requests assigned to them; the SLA times (`slaHighHours` 24, `slaMediumHours` 72, `slaLowHours` 168, `reviewDeadlineHours` 48, `autoCloseDays` 7) are read from the settings table with those defaults.
 
 **RequestRating** (FR-50, BR-26) — `requestId PK/FK, stars (CHECK 1–5), comment, ratedById, createdAt`.
 
@@ -545,7 +547,7 @@ Each transition: insert `RequestUpdate`, update the request, notify the submitte
 **Daily, 00:15 Asia/Dhaka** (also runs once at server start to catch up):
 1. `BILL_DUE_SOON` — balance > 0 and `dueDate = today + reminderDaysBefore` (BR-20).
 2. `BILL_OVERDUE` — balance > 0 and `dueDate = today − 1`.
-3. Auto-close — RESOLVED requests with `resolvedAt < now − autoCloseDays` (BR-18).
+3. Auto-close — RESOLVED requests with `resolvedAt < now − autoCloseDays` (BR-18). *(Built in Sprint 3 as `autoCloseResolved()`, run at server start and then hourly; Sprint 4 moves it into this daily job.)*
 4. Scheduled tasks — active tasks with `nextDueDate − 7 days ≤ today`: create the request and advance `nextDueDate` by `intervalMonths`; loop until in the future, so missed periods are caught up (BR-25).
 
 **Every 5 minutes:**

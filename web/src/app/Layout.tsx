@@ -16,12 +16,17 @@ export function Layout() {
   // The building's name is a setting the administrator can change (shown for everyone who is logged in).
   const building = useQuery({ queryKey: ['public-settings'], queryFn: () => api.get<{ buildingName: string }>('/api/settings/public'), staleTime: 5 * 60_000 });
 
+  // The same page shows each person what is theirs to deal with.
+  const seesAllRequests = user?.role === 'ADMIN' || ['maintenance.view_all', 'maintenance.review', 'maintenance.assign'].some((p) => can(p as 'maintenance.review'));
+  const requestsLabel = user?.role === 'RESIDENT' ? t('nav.myRequests') : seesAllRequests ? t('nav.requests') : t('nav.myTasks');
+
   // Menus show only what the user is allowed to use (FR-02).
   const links: { to: string; label: string; show: boolean }[] = [
     { to: '/', label: t('nav.home'), show: true },
     { to: '/units', label: t('nav.units'), show: can('units.manage') || can('residents.manage') },
     { to: '/residents', label: t('nav.residents'), show: can('residents.manage') },
     { to: '/bills', label: t('nav.bills'), show: user?.role === 'RESIDENT' || BILL_READ_PERMISSIONS.some((p) => can(p)) },
+    { to: '/requests', label: requestsLabel, show: true },
     { to: '/fees', label: t('nav.fees'), show: can('billing.manage') },
     { to: '/directory', label: t('nav.directory'), show: can('directory.view') },
     { to: '/staff', label: t('nav.staff'), show: user?.role === 'ADMIN' },

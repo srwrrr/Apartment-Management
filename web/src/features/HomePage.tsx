@@ -65,6 +65,7 @@ export function HomePage() {
     { to: '/units', label: t('nav.units'), show: can('units.manage') || can('residents.manage') },
     { to: '/residents', label: t('nav.residents'), show: can('residents.manage') },
     { to: '/bills', label: t('nav.bills'), show: BILL_READ_PERMISSIONS.some((p) => can(p)) },
+    { to: '/requests', label: user.role === 'STAFF' && !['maintenance.view_all', 'maintenance.review', 'maintenance.assign'].some((p) => can(p as 'maintenance.review')) ? t('nav.myTasks') : t('nav.requests'), show: user.role !== 'RESIDENT' },
     { to: '/fees', label: t('nav.fees'), show: can('billing.manage') },
     { to: '/directory', label: t('nav.directory'), show: can('directory.view') },
     { to: '/staff', label: t('nav.staff'), show: user.role === 'ADMIN' },
@@ -78,6 +79,9 @@ export function HomePage() {
         <div className="space-y-4">
           <p className="text-muted">{t('home.residentIntro')}</p>
           <BalanceCard />
+          <Link to="/requests/new" className="inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700">
+            {t('maintenance.report')}
+          </Link>
           <ResidentHome />
           <Link to="/profile" className="inline-block min-h-11 font-semibold text-brand-700 underline">
             {t('nav.profile')}

@@ -119,6 +119,60 @@ export interface BillDetail {
   charges: Charge[];
   payments: PaymentEntry[];
 }
+// -------------------------------------------------------------- maintenance
+export type RequestStatus = 'SUBMITTED' | 'UNDER_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'REJECTED' | 'CANCELLED';
+export type RequestPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export interface RequestRow {
+  id: string;
+  number: number;
+  title: string;
+  category: string;
+  priority: RequestPriority | null;
+  status: RequestStatus;
+  overdue?: boolean;
+  createdAt: string;
+  dueAt?: string;
+  unit: { id: string; unitNumber: string };
+  assignedTo?: { id: string; fullName: string } | string | null;
+  submittedBy?: string;
+}
+export interface Photo {
+  id: string;
+  name: string;
+}
+export interface RequestUpdateEntry {
+  id: string;
+  kind: 'NOTE' | 'STATUS_CHANGE' | 'PRIORITY_CHANGE' | 'ASSIGNMENT';
+  fromValue: string | null;
+  toValue: string | null;
+  note: string | null;
+  isInternal: boolean;
+  createdAt: string;
+  author: string | null;
+  photos: Photo[];
+}
+export interface RequestDetail {
+  id: string;
+  number: number;
+  title: string;
+  description: string;
+  category: string;
+  location: 'UNIT' | 'COMMON_AREA';
+  priority: RequestPriority | null;
+  status: RequestStatus;
+  overdue: boolean;
+  dueAt: string;
+  createdAt: string;
+  resolvedAt: string | null;
+  closedAt: string | null;
+  unit: { id: string; unitNumber: string; floor: number };
+  assignedTo: { id: string; fullName: string } | null;
+  submittedBy: { id: string; fullName: string; phone?: string };
+  photos: Photo[];
+  updates: RequestUpdateEntry[];
+}
+
 export interface FeeItem {
   chargeType: Exclude<ChargeType, 'OPENING_BALANCE' | 'OTHER'>;
   amount: number;

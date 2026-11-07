@@ -32,14 +32,16 @@ async function ensureCsrf(): Promise<string> {
 
 async function request<T>(method: string, url: string, body?: unknown, canRetry = true): Promise<T> {
   const headers: Record<string, string> = {};
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  // A form with photos is sent as it is: the browser adds the right Content-Type (with its boundary) itself.
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   let res: Response;
   try {
     if (method !== 'GET') headers['X-CSRF-Token'] = await ensureCsrf();
     res = await fetch(url, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
       credentials: 'same-origin',
     });
   } catch {
@@ -70,4 +72,6 @@ export const api = {
   patch: <T>(url: string, body: unknown) => request<T>('PATCH', url, body),
   put: <T>(url: string, body: unknown) => request<T>('PUT', url, body),
   delete: <T>(url: string) => request<T>('DELETE', url),
+  /** POST a form (text fields plus photos). */
+  postForm: <T>(url: string, form: FormData) => request<T>('POST', url, form),
 };
