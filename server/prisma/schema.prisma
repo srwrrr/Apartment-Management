@@ -1,0 +1,718 @@
+// Data model v1 (first slice: people & places). See project_spec.md §5.
+// Rules Prisma can't express (case-insensitive unit uniqueness, no-overlap occupancy,
+// one billing contact, CHECKs) are added as raw SQL in the migration files.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  RESIDENT
+  STAFF
+  ADMIN
+}
+
+enum Language {
+  EN
+  BN
+}
+
+enum TextSize {
+  NORMAL
+  LARGE
+}
+
+enum OccupancyType {
+  OWNER
+  TENANT
+}
+
+model User {
+  id                 String    @id @default(uuid()) @db.Uuid
+  loginId            String    @unique
+  passwordHash       String
+  role               Role
+  fullName           String
+  phone              String
+  language           Language  @default(EN)
+  textSize           TextSize  @default(NORMAL)
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(true)
+  failedLoginCount   Int       @default(0)
+  lockedUntil        DateTime? @db.Timestamptz
+  createdAt          DateTime  @default(now()) @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @db.Timestamptz
+
+  profile          ResidentProfile?
+  permissions      StaffPermission[]
+  occupancies      Occupancy[]
+  householdOf      HouseholdMember[]
+  billsAsContact   Bill[]            @relation("BillingContact")
+  billsCreated     Bill[]            @relation("BillCreator")
+  paymentsRecorded Payment[]         @relation("PaymentRecorder")
+  paymentsVoided   Payment[]         @relation("PaymentVoider")
+
+  requestsSubmitted   MaintenanceRequest[] @relation("RequestSubmitter")
+  requestsAssigned    MaintenanceRequest[] @relation("RequestAssignee")
+  requestUpdates      RequestUpdate[]      @relation("UpdateAuthor")
+  attachmentsUploaded Attachment[]         @relation("AttachmentUploader")
+
+  announcementsPublished Announcement[]          @relation("AnnouncementPublisher")
+  announcementsReceived  AnnouncementRecipient[] @relation("AnnouncementRecipient")
+  notifications          Notification[]          @relation("NotificationRecipient")
+
+  paymentReportsMade     PaymentReport[]       @relation("PaymentReporter")
+  paymentReportsReviewed PaymentReport[]       @relation("PaymentReviewer")
+  certificatesReceived   NoDuesCertificate[]   @relation("CertificateResident")
+  certificatesIssued     NoDuesCertificate[]   @relation("CertificateIssuer")
+  expensesRecorded       Expense[]             @relation("ExpenseRecorder")
+  expensesVoided         Expense[]             @relation("ExpenseVoider")
+  activities             ActivityLog[]         @relation("ActivityActor")
+  requestRatings         RequestRating[]       @relation("RequestRater")
+  scheduledTasksCreated  ScheduledTask[]       @relation("ScheduledTaskCreator")
+  scheduledTasksAssigned ScheduledTask[]       @relation("ScheduledTaskAssignee")
+  residentGroups         ResidentGroupMember[]
+
+  @@map("users")
+}
+
+model ResidentProfile {
+  userId                String  @id @db.Uuid
+  altPhone              String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  user                  User    @relation(fields: [userId], references: [id])
+
+  @@map("resident_profiles")
+}
+
+model StaffPermission {
+  userId     String @db.Uuid
+  permission String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, permission])
+  @@map("staff_permissions")
+}
+
+model Unit {
+  id          String  @id @default(uuid()) @db.Uuid
+  unitNumber  String
+  floor       Int
+  sizeSqft    Int?
+  bedrooms    Int?
+  isAvailable Boolean @default(true)
+
+  occupancies           Occupancy[]
+  bills                 Bill[]
+  fees                  UnitFee[]
+  requests              MaintenanceRequest[]
+  announcementAudiences AnnouncementAudience[]
+  certificates          NoDuesCertificate[]
+
+  @@map("units")
+}
+
+model Occupancy {
+  id               String        @id @default(uuid()) @db.Uuid
+  unitId           String        @db.Uuid
+  residentId       String        @db.Uuid
+  type             OccupancyType
+  startDate        DateTime      @db.Date
+  endDate          DateTime?     @db.Date
+  isBillingContact Boolean       @default(false)
+  /// FR-56: why a resident was moved out with dues still unpaid.
+  moveOutNote      String?
+
+  unit      Unit              @relation(fields: [unitId], references: [id])
+  resident  User              @relation(fields: [residentId], references: [id])
+  household HouseholdMember[]
+
+  @@index([unitId])
+  @@index([residentId])
+  @@map("occupancies")
+}
+
+model HouseholdMember {
+  id          String    @id @default(uuid()) @db.Uuid
+  occupancyId String    @db.Uuid
+  userId      String    @db.Uuid
+  relation    String
+  addedAt     DateTime  @db.Date
+  removedAt   DateTime? @db.Date
+
+  occupancy Occupancy @relation(fields: [occupancyId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("household_members")
+}
+
+model Setting {
+  key   String @id
+  value String
+
+  @@map("settings")
+}
+
+// Managed by connect-pg-simple (express sessions). userId lets us end a user's
+// other sessions after a password change (FR-31).
+model Session {
+  sid    String   @id
+  sess   Json
+  expire DateTime @db.Timestamp(6)
+  userId String?  @db.Uuid
+
+  @@index([expire])
+  @@index([userId])
+  @@map("session")
+}
+
+// ---------------------------------------------------------------- billing (Sprint 2)
+// Money is integer poisha (1 BDT = 100 poisha). A bill's total / paid / balance / status are never stored:
+// they are computed by the bill_summary view so they can never drift out of sync (SRS BR-09).
+
+enum BillKind {
+  REGULAR
+  OPENING_BALANCE
+}
+
+enum ChargeType {
+  SERVICE
+  RENT
+  WATER
+  GAS
+  ELECTRICITY
+  OPENING_BALANCE
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  BANK
+  BKASH
+  NAGAD
+  ROCKET
+  OTHER
+}
+
+/// Recurring charges applied when bills are generated. unitId null = the building-wide default.
+model UnitFee {
+  id          String     @id @default(uuid()) @db.Uuid
+  unitId      String?    @db.Uuid
+  chargeType  ChargeType
+  amount      Int
+  description String
+
+  unit Unit? @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId])
+  @@map("unit_fees")
+}
+
+model Bill {
+  id               String   @id @default(uuid()) @db.Uuid
+  unitId           String   @db.Uuid
+  kind             BillKind @default(REGULAR)
+  billingMonth     DateTime @db.Date
+  dueDate          DateTime @db.Date
+  billingContactId String?  @db.Uuid
+  note             String?
+  createdById      String   @db.Uuid
+  createdAt        DateTime @default(now()) @db.Timestamptz
+
+  unit           Unit            @relation(fields: [unitId], references: [id])
+  billingContact User?           @relation("BillingContact", fields: [billingContactId], references: [id])
+  createdBy      User            @relation("BillCreator", fields: [createdById], references: [id])
+  charges        Charge[]
+  payments       Payment[]
+  paymentReports PaymentReport[]
+
+  @@unique([unitId, billingMonth])
+  @@index([billingMonth])
+  @@map("bills")
+}
+
+model Charge {
+  id          String     @id @default(uuid()) @db.Uuid
+  billId      String     @db.Uuid
+  type        ChargeType
+  amount      Int
+  description String
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([billId])
+  @@map("charges")
+}
+
+model Payment {
+  id           String        @id @default(uuid()) @db.Uuid
+  billId       String        @db.Uuid
+  amount       Int
+  paidOn       DateTime      @db.Date
+  method       PaymentMethod
+  reference    String?
+  receiptNo    String        @unique
+  recordedById String        @db.Uuid
+  voidedAt     DateTime?     @db.Timestamptz
+  voidedById   String?       @db.Uuid
+  voidReason   String?
+  createdAt    DateTime      @default(now()) @db.Timestamptz
+
+  bill       Bill           @relation(fields: [billId], references: [id])
+  recordedBy User           @relation("PaymentRecorder", fields: [recordedById], references: [id])
+  voidedBy   User?          @relation("PaymentVoider", fields: [voidedById], references: [id])
+  report     PaymentReport?
+
+  @@index([billId])
+  @@index([method, reference])
+  @@map("payments")
+}
+
+/// Yearly counters for receipt numbers (RCPT-YYYY-NNNNN) and certificates later. Incremented under a row lock.
+model Counter {
+  kind  String
+  year  Int
+  value Int
+
+  @@id([kind, year])
+  @@map("counters")
+}
+
+// -------------------------------------------------------------- maintenance (Sprint 3)
+
+enum RequestCategory {
+  PLUMBING
+  ELECTRICAL
+  LIFT
+  GENERATOR
+  WATER_SUPPLY
+  GAS
+  CLEANING
+  SECURITY
+  COMMON_AREA
+  OTHER
+}
+
+enum RequestLocation {
+  UNIT
+  COMMON_AREA
+}
+
+enum RequestPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RequestStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  REJECTED
+  CANCELLED
+}
+
+enum UpdateKind {
+  NOTE
+  STATUS_CHANGE
+  PRIORITY_CHANGE
+  ASSIGNMENT
+}
+
+model MaintenanceRequest {
+  id              String           @id @default(uuid()) @db.Uuid
+  /// The human-friendly request number shown as #1024.
+  number          Int              @unique @default(autoincrement())
+  /// Empty for a job the system created from a scheduled task (BR-25).
+  submittedById   String?          @db.Uuid
+  /// Empty for a job in the common areas that no unit reported.
+  unitId          String?          @db.Uuid
+  scheduledTaskId String?          @db.Uuid
+  location        RequestLocation
+  category        RequestCategory
+  title           String
+  description     String
+  priority        RequestPriority?
+  status          RequestStatus    @default(SUBMITTED)
+  assignedToId    String?          @db.Uuid
+  /// When it should be resolved by (BR-17): from the priority, or the review deadline while unprioritised.
+  dueAt           DateTime         @db.Timestamptz
+  resolvedAt      DateTime?        @db.Timestamptz
+  closedAt        DateTime?        @db.Timestamptz
+  createdAt       DateTime         @default(now()) @db.Timestamptz
+  updatedAt       DateTime         @updatedAt @db.Timestamptz
+
+  submittedBy   User?           @relation("RequestSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  assignedTo    User?           @relation("RequestAssignee", fields: [assignedToId], references: [id])
+  unit          Unit?           @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  updates       RequestUpdate[]
+  attachments   Attachment[]
+  rating        RequestRating?
+  scheduledTask ScheduledTask?  @relation(fields: [scheduledTaskId], references: [id])
+
+  /// A task can only create one request for each due date, however often the job runs.
+  @@unique([scheduledTaskId, dueAt])
+  @@index([status])
+  @@index([submittedById])
+  @@index([assignedToId])
+  @@index([unitId])
+  @@map("maintenance_requests")
+}
+
+/// BR-26: one rating for a request, which cannot be changed afterwards.
+model RequestRating {
+  requestId String   @id @db.Uuid
+  stars     Int
+  comment   String?
+  ratedById String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  request MaintenanceRequest @relation(fields: [requestId], references: [id])
+  ratedBy User               @relation("RequestRater", fields: [ratedById], references: [id])
+
+  @@map("request_ratings")
+}
+
+/// BR-25: routine upkeep that repeats, such as servicing the lift each month.
+model ScheduledTask {
+  id                String          @id @default(uuid()) @db.Uuid
+  title             String
+  description       String
+  category          RequestCategory
+  intervalMonths    Int
+  nextDueDate       DateTime        @db.Date
+  defaultAssigneeId String?         @db.Uuid
+  isPaused          Boolean         @default(false)
+  createdById       String          @db.Uuid
+  createdAt         DateTime        @default(now()) @db.Timestamptz
+
+  defaultAssignee User?                @relation("ScheduledTaskAssignee", fields: [defaultAssigneeId], references: [id])
+  createdBy       User                 @relation("ScheduledTaskCreator", fields: [createdById], references: [id])
+  requests        MaintenanceRequest[]
+
+  @@index([nextDueDate])
+  @@map("scheduled_tasks")
+}
+
+/// The history of a request. Rows are only ever added: each records who did what and when (FR-20).
+model RequestUpdate {
+  id         String     @id @default(uuid()) @db.Uuid
+  /// Order of insertion. Rows written in one transaction share a timestamp, so this is what keeps the history in order.
+  seq        Int        @unique @default(autoincrement())
+  requestId  String     @db.Uuid
+  /// null means the system itself (for example the automatic close).
+  authorId   String?    @db.Uuid
+  kind       UpdateKind
+  fromValue  String?
+  toValue    String?
+  note       String?
+  /// Internal notes are visible to staff only, never to the resident.
+  isInternal Boolean    @default(false)
+  createdAt  DateTime   @default(now()) @db.Timestamptz
+
+  request     MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author      User?              @relation("UpdateAuthor", fields: [authorId], references: [id])
+  attachments Attachment[]
+
+  @@index([requestId])
+  @@map("request_updates")
+}
+
+/// An uploaded photo. The file lives outside the database under a random name; only a reference is stored.
+model Attachment {
+  id              String   @id @default(uuid()) @db.Uuid
+  storedName      String   @unique
+  originalName    String
+  mimeType        String
+  sizeBytes       Int
+  uploadedById    String   @db.Uuid
+  requestId       String?  @db.Uuid
+  requestUpdateId String?  @db.Uuid
+  paymentReportId String?  @unique @db.Uuid
+  expenseId       String?  @unique @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz
+
+  uploadedBy    User                @relation("AttachmentUploader", fields: [uploadedById], references: [id])
+  request       MaintenanceRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  requestUpdate RequestUpdate?      @relation(fields: [requestUpdateId], references: [id], onDelete: Cascade)
+  paymentReport PaymentReport?      @relation(fields: [paymentReportId], references: [id])
+  expense       Expense?            @relation(fields: [expenseId], references: [id])
+
+  @@index([requestId])
+  @@index([requestUpdateId])
+  @@map("attachments")
+}
+
+// ---------------------------------------------------- announcements & notifications (Sprint 4)
+
+enum AnnouncementCategory {
+  GENERAL
+  MAINTENANCE
+  MEETING
+  SERVICE_INTERRUPTION
+  RULES
+}
+
+enum AudienceType {
+  ALL
+  UNITS
+  FLOORS
+  OWNERS
+  TENANTS
+  GROUP
+}
+
+enum NotificationType {
+  ANNOUNCEMENT
+  BILL_NEW
+  BILL_DUE_SOON
+  BILL_OVERDUE
+  PAYMENT_RECORDED
+  REQUEST_NEW
+  REQUEST_UPDATE
+  REQUEST_ASSIGNED
+  REQUEST_SCHEDULED
+  PAYMENT_REPORT_NEW
+  PAYMENT_REPORT_VERIFIED
+  PAYMENT_REPORT_REJECTED
+  CERTIFICATE_ISSUED
+  MOVE_OUT_RECORDED
+}
+
+model Announcement {
+  id                   String               @id @default(uuid()) @db.Uuid
+  title                String
+  body                 String
+  category             AnnouncementCategory @default(GENERAL)
+  /// Important announcements are pinned at the top of residents' pages.
+  isImportant          Boolean              @default(false)
+  audienceType         AudienceType
+  publishedById        String               @db.Uuid
+  /// When it goes out. This can be in the future (FR-51).
+  publishedAt          DateTime             @default(now()) @db.Timestamptz
+  /// After this it moves to residents' past announcements (FR-51).
+  endsAt               DateTime?            @db.Timestamptz
+  /// Set once the audience is fixed and everyone is told. Empty means it has not gone out yet.
+  recipientsResolvedAt DateTime?            @db.Timestamptz
+  editedAt             DateTime?            @db.Timestamptz
+  /// Archived announcements disappear from residents' pages but stay on record.
+  archivedAt           DateTime?            @db.Timestamptz
+
+  publishedBy User                    @relation("AnnouncementPublisher", fields: [publishedById], references: [id])
+  audience    AnnouncementAudience[]
+  recipients  AnnouncementRecipient[]
+
+  @@index([publishedAt])
+  @@index([recipientsResolvedAt])
+  @@map("announcements")
+}
+
+/// The choices behind an audience: which units, or which floors. (All, owners and tenants need no rows.)
+model AnnouncementAudience {
+  id             String  @id @default(uuid()) @db.Uuid
+  announcementId String  @db.Uuid
+  unitId         String? @db.Uuid
+  floor          Int?
+  groupId        String? @db.Uuid
+  /// Kept so the record still reads correctly after the group is deleted (FR-36).
+  groupName      String?
+
+  announcement Announcement   @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  unit         Unit?          @relation(fields: [unitId], references: [id])
+  group        ResidentGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@index([announcementId])
+  @@map("announcement_audience")
+}
+
+/// FR-36: a named set of residents to send announcements to.
+model ResidentGroup {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz
+
+  members   ResidentGroupMember[]
+  audiences AnnouncementAudience[]
+
+  @@map("resident_groups")
+}
+
+model ResidentGroupMember {
+  groupId String @db.Uuid
+  userId  String @db.Uuid
+
+  group ResidentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id])
+
+  @@id([groupId, userId])
+  @@index([userId])
+  @@map("resident_group_members")
+}
+
+/// FR-52: important phone numbers. Not private, so this is the one thing the app keeps for offline use.
+model EmergencyContact {
+  id        String @id @default(uuid()) @db.Uuid
+  name      String
+  role      String
+  phone     String
+  hours     String
+  sortOrder Int
+
+  @@index([sortOrder])
+  @@map("emergency_contacts")
+}
+
+/// Who the announcement was sent to, fixed at the moment it was published (FR-24): people who move in later do not get it.
+model AnnouncementRecipient {
+  announcementId String @db.Uuid
+  userId         String @db.Uuid
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation("AnnouncementRecipient", fields: [userId], references: [id])
+
+  @@id([announcementId, userId])
+  @@index([userId])
+  @@map("announcement_recipients")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  type      NotificationType
+  /// The facts the sentence is built from (unit, month, amount, title…). The sentence itself is written in the
+  /// reader's language when shown, so switching language also translates old notifications.
+  params    Json             @default("{}")
+  /// Where clicking it goes, e.g. /bills/…
+  link      String
+  entityId  String?          @db.Uuid
+  readAt    DateTime?        @db.Timestamptz
+  createdAt DateTime         @default(now()) @db.Timestamptz
+
+  user User @relation("NotificationRecipient", fields: [userId], references: [id])
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+// ---------------------------------------------------------------- Sprint 5
+
+enum PaymentReportStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+/// FR-39, FR-40, BR-21: "I've paid". Only verifying it creates a Payment; until then no balance changes.
+model PaymentReport {
+  id           String              @id @default(uuid()) @db.Uuid
+  billId       String              @db.Uuid
+  reportedById String              @db.Uuid
+  amount       Int
+  paidOn       DateTime            @db.Date
+  method       PaymentMethod
+  reference    String
+  status       PaymentReportStatus @default(PENDING)
+  reviewedById String?             @db.Uuid
+  reviewedAt   DateTime?           @db.Timestamptz
+  rejectReason String?
+  paymentId    String?             @unique @db.Uuid
+  createdAt    DateTime            @default(now()) @db.Timestamptz
+
+  bill       Bill        @relation(fields: [billId], references: [id])
+  reportedBy User        @relation("PaymentReporter", fields: [reportedById], references: [id])
+  reviewedBy User?       @relation("PaymentReviewer", fields: [reviewedById], references: [id])
+  payment    Payment?    @relation(fields: [paymentId], references: [id])
+  screenshot Attachment?
+
+  @@index([status, createdAt])
+  @@index([billId])
+  @@index([method, reference])
+  @@map("payment_reports")
+}
+
+/// FR-46, BR-24: proof that a unit owed nothing on the day of issue.
+model NoDuesCertificate {
+  id                 String   @id @default(uuid()) @db.Uuid
+  number             String   @unique
+  unitId             String   @db.Uuid
+  issuedToId         String   @db.Uuid
+  coversThroughMonth DateTime @db.Date
+  issuedById         String   @db.Uuid
+  issuedAt           DateTime @default(now()) @db.Timestamptz
+
+  unit     Unit @relation(fields: [unitId], references: [id])
+  issuedTo User @relation("CertificateResident", fields: [issuedToId], references: [id])
+  issuedBy User @relation("CertificateIssuer", fields: [issuedById], references: [id])
+
+  @@index([unitId])
+  @@index([issuedToId])
+  @@map("no_dues_certificates")
+}
+
+enum ExpenseCategory {
+  STAFF_SALARY
+  GENERATOR_FUEL
+  COMMON_ELECTRICITY
+  WATER
+  CLEANING
+  LIFT
+  SECURITY
+  REPAIRS
+  OTHER
+}
+
+/// FR-43, BR-23. Never deleted: a wrong one is voided with a reason, like a payment.
+model Expense {
+  id           String          @id @default(uuid()) @db.Uuid
+  spentOn      DateTime        @db.Date
+  category     ExpenseCategory
+  amount       Int
+  payee        String
+  description  String?
+  recordedById String          @db.Uuid
+  voidedAt     DateTime?       @db.Timestamptz
+  voidedById   String?         @db.Uuid
+  voidReason   String?
+  createdAt    DateTime        @default(now()) @db.Timestamptz
+  updatedAt    DateTime        @updatedAt @db.Timestamptz
+
+  recordedBy User        @relation("ExpenseRecorder", fields: [recordedById], references: [id])
+  voidedBy   User?       @relation("ExpenseVoider", fields: [voidedById], references: [id])
+  receipt    Attachment?
+
+  @@index([spentOn])
+  @@index([category])
+  @@map("expenses")
+}
+
+// ---------------------------------------------------------------- Sprint 6
+
+/// FR-34: who did what, and when. A database trigger refuses any update or delete of these rows.
+model ActivityLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  /// Empty for the system's own jobs and for failed logins, where nobody is known to be logged in.
+  actorId    String?  @db.Uuid
+  action     String
+  entityType String?
+  entityId   String?  @db.Uuid
+  /// The facts of the action. The web app writes the sentence in the reader's language. Never passwords.
+  details    Json     @default("{}")
+  ip         String?
+  createdAt  DateTime @default(now()) @db.Timestamptz
+
+  actor User? @relation("ActivityActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@map("activity_logs")
+}

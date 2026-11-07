@@ -1,0 +1,57 @@
+{
+  "name": "@apt/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "start": "tsx src/server.ts",
+    "serve": "dotenv -v SERVE_WEB=true -- tsx src/server.ts",
+    "test": "vitest run",
+    "db:migrate": "dotenv -e ../.env -- prisma migrate dev",
+    "db:deploy": "dotenv -e ../.env -- prisma migrate deploy",
+    "db:studio": "dotenv -e ../.env -- prisma studio",
+    "seed": "tsx prisma/seed.ts",
+    "demo:reset": "tsx prisma/seed.ts --reset",
+    "perf": "node perf/prepare.cjs"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@apt/shared": "*",
+    "@fontsource/noto-sans": "^5.3.0",
+    "@fontsource/noto-sans-bengali": "^5.3.0",
+    "@prisma/client": "^6.1.0",
+    "bcryptjs": "^2.4.3",
+    "connect-pg-simple": "^10.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-rate-limit": "^8.7.3",
+    "express-session": "^1.19.0",
+    "file-type": "^22.3.0",
+    "helmet": "^8.0.0",
+    "multer": "^2.5.0",
+    "papaparse": "^5.7.0",
+    "pg": "^8.23.1",
+    "playwright-core": "^1.65.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/connect-pg-simple": "^7.0.3",
+    "@types/express": "^4.17.21",
+    "@types/express-session": "^1.19.0",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^22.0.0",
+    "@types/papaparse": "^5.5.2",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^6.0.2",
+    "dotenv-cli": "^11.1.0",
+    "prisma": "^6.1.0",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0"
+  }
+}

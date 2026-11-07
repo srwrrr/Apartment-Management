@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+*.log
+server/uploads/*
+!server/uploads/.gitkeep
+backups/
+coverage/
+.vite/
+test-results/
+playwright-report/
+server/.test-uploads/
+.vscode/

@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main, srwr]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: apt
+          POSTGRES_PASSWORD: apt
+          POSTGRES_DB: apartment
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U apt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://apt:apt@localhost:5432/apartment
+      SESSION_SECRET: ci-secret-ci-secret-ci-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+        working-directory: server
+      - run: npx prisma migrate deploy
+        working-directory: server
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+      - name: Type checks
+        run: |
+          npx tsc --noEmit -p server
+          npx tsc --noEmit -p web
+      - name: Unit and API tests
+        run: npm test
+      - name: Browser tests
+        run: npx playwright test
+      - name: Installable app tests
+        run: npx playwright test -c playwright.pwa.config.ts
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
