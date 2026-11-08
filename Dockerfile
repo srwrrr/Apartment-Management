@@ -12,8 +12,12 @@ COPY web/package.json web/
 RUN npm ci --no-audit --no-fund
 
 COPY . .
-RUN npx prisma generate --schema server/prisma/schema.prisma \
- && npm run build -w @apt/web
+# The project's own tools (prisma, tsx) are called directly from here, never through npx,
+# which can stop to look up or download a package while the server is starting.
+ENV PATH=/app/node_modules/.bin:$PATH
+RUN prisma generate --schema server/prisma/schema.prisma \
+ && npm run build -w @apt/web \
+ && sed -i 's/\r$//' scripts/docker-start.sh
 
 ENV NODE_ENV=production \
     SERVE_WEB=true \
@@ -22,6 +26,5 @@ ENV NODE_ENV=production \
 EXPOSE 10000
 
 # On every start: apply any new migrations, make sure the demo accounts and building exist
-# (the seed never touches a database that already has units), then serve.
-WORKDIR /app/server
-CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx prisma/seed.ts && exec npx tsx src/server.ts"]
+# (the seed never touches a database that already has units), then serve. See scripts/docker-start.sh.
+CMD ["sh", "/app/scripts/docker-start.sh"]
