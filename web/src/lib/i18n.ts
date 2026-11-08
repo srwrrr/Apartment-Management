@@ -34,7 +34,8 @@ export function initialLanguage(): Lang {
   return typeof navigator !== 'undefined' && navigator.language?.toLowerCase().startsWith('bn') ? 'bn' : 'en';
 }
 
-i18n.use(initReactI18next).init({
+// The translations are bundled, so init finishes at once; its promise has nothing left to wait for.
+void i18n.use(initReactI18next).init({
   resources: { en: { translation: en }, bn: { translation: bn } },
   lng: initialLanguage(),
   fallbackLng: 'en',

@@ -12,7 +12,7 @@ export function errorMessage(t: TFunction, error: unknown): string {
 const MONEY_PARAMS = ['balance', 'amount', 'total'];
 function readable(params: Record<string, unknown> = {}) {
   const out: Record<string, unknown> = { ...params };
-  for (const k of MONEY_PARAMS) if (typeof out[k] === 'number') out[k] = formatBDT(out[k] as number);
+  for (const k of MONEY_PARAMS) if (typeof out[k] === 'number') out[k] = formatBDT(out[k]);
   return out;
 }
 

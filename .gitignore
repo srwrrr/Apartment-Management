@@ -11,3 +11,9 @@ test-results/
 playwright-report/
 server/.test-uploads/
 .vscode/
+
+# Generated documentation (npm run docs)
+docs/api/
+
+# Final report files (submitted separately, not kept in Git)
+docs/final-report/

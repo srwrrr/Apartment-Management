@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Wrench } from 'lucide-react';
 import { useAuth } from '../app/auth';
-import { Card, Chip, Notice, PageHeader, Spinner } from '../components/ui';
+import { Card, Chip, Notice, PageHeader } from '../components/ui';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/errors';
 import { formatDate } from '../lib/format';
@@ -14,6 +14,17 @@ import { Dashboard } from './DashboardPage';
 function BalanceCard() {
   const { t } = useTranslation();
   const q = useQuery({ queryKey: ['my-balance'], queryFn: () => api.get<{ outstanding: number; overdueBills: number; openBills: number }>('/api/me/billing/balance') });
+  // While loading, a placeholder of the same shape holds the space, so nothing below jumps when the figure arrives.
+  if (q.isLoading) return (
+    <Card>
+      <div aria-busy="true" aria-label={t('common.loading')}>
+        <span className="skeleton h-5 w-24" />
+        <span className="skeleton mt-1 h-14 w-56" />
+        <span className="skeleton mt-2 h-7 w-28" />
+        <span className="skeleton mt-3 h-5 w-28" />
+      </div>
+    </Card>
+  );
   if (!q.data) return null;
   return (
     <Card>
@@ -36,7 +47,14 @@ function BalanceCard() {
 function ResidentHome() {
   const { t } = useTranslation();
   const q = useQuery({ queryKey: ['my-profile'], queryFn: () => api.get<MyProfile>('/api/me/profile') });
-  if (q.isLoading) return <Spinner />;
+  if (q.isLoading) return (
+    <Card>
+      <h2 className="mb-3 heading-section">{t('home.yourUnits')}</h2>
+      <div aria-busy="true" aria-label={t('common.loading')}>
+        <span className="skeleton h-8 w-48" />
+      </div>
+    </Card>
+  );
   if (q.isError) return <Notice>{errorMessage(t, q.error)}</Notice>;
   const current = q.data!.occupancies.filter((o) => !o.endDate);
   return (

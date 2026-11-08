@@ -1,0 +1,25 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "Apartment Management: code documentation",
+  "readme": "none",
+  "tsconfig": "tsconfig.typedoc.json",
+  "entryPointStrategy": "expand",
+  "entryPoints": [
+    "packages/shared/src/money.ts",
+    "packages/shared/src/permissions.ts",
+    "packages/shared/src/validation.ts",
+    "server/src/lib",
+    "server/src/middleware",
+    "server/src/modules",
+    "server/src/pdf",
+    "server/src/jobs"
+  ],
+  "exclude": ["**/*.test.ts", "**/*.routes.ts"],
+  "out": "docs/api",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "categorizeByGroup": true,
+  "sort": ["source-order"],
+  "navigation": { "includeCategories": false, "includeGroups": false },
+  "validation": { "notExported": false, "invalidLink": true, "notDocumented": false }
+}

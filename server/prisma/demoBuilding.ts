@@ -104,7 +104,7 @@ export async function demoBuilding(staff: { admin: string; caretaker: string; ma
     for (let i = 0; i < homes.length; i++) {
       const bill = await billOf(homes[i]!.id, m);
       if (!bill) continue;
-      const skip = unpaid[k] ? unpaid[k]!.has(i) : i % 3 !== 0;
+      const skip = unpaid[k] ? unpaid[k].has(i) : i % 3 !== 0;
       if (skip) continue;
       await pay(bill.id, partly[k]!.has(i) ? Math.round(bill.total / 2) : bill.total, `${m}-${String(3 + (i % 8)).padStart(2, '0')}`, i);
     }

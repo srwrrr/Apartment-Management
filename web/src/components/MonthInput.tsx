@@ -139,7 +139,7 @@ export function MonthInput({ value, onChange, required, disabled, ...field }: Pr
       ref={wrap}
       className="relative"
       onBlur={(e) => {
-        if (open && !wrap.current?.contains(e.relatedTarget as Node | null)) setOpen(false);
+        if (open && !wrap.current?.contains(e.relatedTarget)) setOpen(false);
       }}
     >
       <input
@@ -199,7 +199,8 @@ export function MonthInput({ value, onChange, required, disabled, ...field }: Pr
               <ChevronRight className="size-5 rtl:rotate-180" aria-hidden="true" />
             </button>
           </div>
-          <div ref={grid} className="grid grid-cols-3 gap-1.5" onKeyDown={onGridKey}>
+          {/* Arrow keys are handled by each month button (a native control), not by this layout box. */}
+          <div ref={grid} className="grid grid-cols-3 gap-1.5">
             {names.map((name, i) => {
               const m = i + 1;
               const ym = `${year}-${pad(m)}`;
@@ -213,6 +214,7 @@ export function MonthInput({ value, onChange, required, disabled, ...field }: Pr
                   aria-pressed={ym === value}
                   aria-current={ym === today ? 'date' : undefined}
                   onClick={() => pick(m)}
+                  onKeyDown={onGridKey}
                 >
                   {/* Read out as "Jan 2026": the visible word stays in the name, for voice control. */}
                   {name}

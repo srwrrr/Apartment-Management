@@ -32,10 +32,12 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(1).max(200),
 });
 
+// The session store reports failures as `any`; always reject with a real Error, so the stack trace survives.
+const asError = (e: unknown) => (e instanceof Error ? e : new Error(String(e)));
 const regenerate = (req: Express.Request) =>
-  new Promise<void>((resolve, reject) => req.session.regenerate((e) => (e ? reject(e) : resolve())));
+  new Promise<void>((resolve, reject) => req.session.regenerate((e) => (e ? reject(asError(e)) : resolve())));
 const save = (req: Express.Request) =>
-  new Promise<void>((resolve, reject) => req.session.save((e) => (e ? reject(e) : resolve())));
+  new Promise<void>((resolve, reject) => req.session.save((e) => (e ? reject(asError(e)) : resolve())));
 
 // Demo mode (spec §12) fills in the login form for a presentation. It is never on in production.
 const DEMO_ACCOUNTS = [

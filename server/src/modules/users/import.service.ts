@@ -34,7 +34,7 @@ const REQUIRED: Record<ImportKind, string[]> = {
 };
 
 /** Header-only templates, with a byte-order mark so Excel opens the UTF-8 file (and Bangla text) correctly. */
-export const template = (kind: ImportKind) => '﻿' + COLUMNS[kind].join(',') + '\r\n';
+export const template = (kind: ImportKind) => '\uFEFF' + COLUMNS[kind].join(',') + '\r\n';
 
 interface Parsed {
   rows: { line: number; v: Record<string, string> }[];
@@ -44,7 +44,7 @@ interface Parsed {
 /** Parses the file and checks the header. Returns row-level data keyed by column name. */
 function parse(kind: ImportKind, csv: string): Parsed {
   const errors: ImportError[] = [];
-  const text = csv.replace(/^﻿/, '');
+  const text = csv.replace(/^\uFEFF/, '');
   if (text.trim() === '') return { rows: [], errors: [{ line: 1, field: '_', code: 'EMPTY_FILE' }] };
 
   const result = Papa.parse<Record<string, string>>(text, {

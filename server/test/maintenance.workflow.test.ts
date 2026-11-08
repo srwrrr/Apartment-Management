@@ -494,7 +494,7 @@ describe('BR-18 automatic close', () => {
     const owner = await prisma.maintenanceRequest.findUniqueOrThrow({ where: { id: req.id }, include: { submittedBy: true } });
     await autoCloseResolved();
     const c = await client(app);
-    await c.login(owner.submittedBy.loginId);
+    await c.login(owner.submittedBy!.loginId); // this request was submitted by a resident
     expect((await go(c, req.id, 'CLOSED')).status).toBe(409);
     expect((await go(c, req.id, 'IN_PROGRESS', 'Broken again')).status).toBe(409);
   });

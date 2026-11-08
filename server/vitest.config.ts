@@ -14,5 +14,12 @@ export default defineConfig({
       NODE_ENV: 'test',
       UPLOAD_DIR: './.test-uploads', // photos written by tests; removed afterwards
     },
+    // `npm run test:coverage`: which lines and branches the tests run (text summary, HTML report, lcov for SonarQube).
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: ['src/server.ts', 'src/types.d.ts'],
+      reporter: ['text-summary', 'html', 'lcov'],
+    },
   },
 });
