@@ -11,8 +11,15 @@ import { formatDateTime } from '../lib/format';
 import type { ActivityEntry, Page } from '../lib/types';
 
 const MONEY = ['amount', 'total', 'balance', 'reported'];
-const show = (key: string, v: unknown) =>
-  key === 'publishAt' && typeof v === 'string' ? formatDateTime(v) : typeof v === 'number' && MONEY.includes(key) ? formatBDT(v) : v === null ? '–' : Array.isArray(v) ? v.join(', ') : String(v);
+/** One recorded value as text. Anything that is not plain text, a number or a yes/no is written out as JSON, never "[object Object]". */
+function show(key: string, v: unknown): string {
+  if (v === null || v === undefined) return '–';
+  if (typeof v === 'string') return key === 'publishAt' ? formatDateTime(v) : v;
+  if (typeof v === 'number') return MONEY.includes(key) ? formatBDT(v) : String(v);
+  if (typeof v === 'boolean') return String(v);
+  if (Array.isArray(v)) return v.map((x) => show('', x)).join(', ');
+  return JSON.stringify(v);
+}
 
 /** The facts of an entry as a short line: "unit: 4B · floor: 7 → 8". */
 export function detailLine(details: Record<string, unknown>): string {

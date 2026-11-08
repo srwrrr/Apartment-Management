@@ -45,17 +45,20 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(400).json({ error: { code: 'VALIDATION_FAILED', fields } });
     return;
   }
+  // Errors from libraries arrive untyped; name only the fields we read.
+  const known = (typeof err === 'object' && err !== null ? err : {}) as { name?: unknown; code?: unknown; field?: unknown; type?: unknown };
   // Upload limits from multer (BR-19): a clear message instead of a server error.
-  if (err?.name === 'MulterError') {
-    const code = err.code === 'LIMIT_FILE_SIZE' ? 'FILE_TOO_LARGE' : 'TOO_MANY_FILES';
-    res.status(400).json({ error: { code: 'VALIDATION_FAILED', fields: { [err.field ?? 'photos']: { code } } } });
+  if (known.name === 'MulterError') {
+    const code = known.code === 'LIMIT_FILE_SIZE' ? 'FILE_TOO_LARGE' : 'TOO_MANY_FILES';
+    const field = typeof known.field === 'string' ? known.field : 'photos';
+    res.status(400).json({ error: { code: 'VALIDATION_FAILED', fields: { [field]: { code } } } });
     return;
   }
-  if (err?.type === 'entity.too.large') {
+  if (known.type === 'entity.too.large') {
     res.status(413).json({ error: { code: 'PAYLOAD_TOO_LARGE' } });
     return;
   }
-  if (err?.type === 'entity.parse.failed') {
+  if (known.type === 'entity.parse.failed') {
     res.status(400).json({ error: { code: 'VALIDATION_FAILED' } });
     return;
   }

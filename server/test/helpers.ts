@@ -125,7 +125,7 @@ export async function occupy(
 /** Building-wide fees, in poisha: setFees({ SERVICE: 300000, WATER: 50000 }). */
 export async function setFees(fees: Partial<Record<'SERVICE' | 'RENT' | 'WATER' | 'GAS' | 'ELECTRICITY', number>>, unitId: string | null = null) {
   await prisma.unitFee.createMany({
-    data: Object.entries(fees).map(([chargeType, amount]) => ({ unitId, chargeType: chargeType as 'SERVICE', amount: amount!, description: chargeType })),
+    data: Object.entries(fees).map(([chargeType, amount]) => ({ unitId, chargeType: chargeType as 'SERVICE', amount, description: chargeType })),
   });
 }
 

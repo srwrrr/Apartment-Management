@@ -24,6 +24,8 @@ export interface StoredFile {
 
 /** A display name only: no folders, no control characters, not too long. It is never used to find the file. */
 function cleanName(name: string): string {
+  // Matching control characters is the point here: they are stripped from uploaded file names.
+  // eslint-disable-next-line no-control-regex
   const base = path.basename(name.split('\\').join('/')).replace(/[\u0000-\u001f\u007f]/g, '').trim();
   return (base || 'photo').slice(0, 100);
 }

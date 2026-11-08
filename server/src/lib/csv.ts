@@ -16,7 +16,7 @@ function cell(v: Cell): string {
 
 /** FR-38: the byte order mark makes Excel read Bangla correctly. */
 export function toCsv(headers: string[], rows: Cell[][]): string {
-  return `﻿${[headers, ...rows].map((r) => r.map(cell).join(',')).join('\r\n')}\r\n`;
+  return `\uFEFF${[headers, ...rows].map((r) => r.map(cell).join(',')).join('\r\n')}\r\n`;
 }
 
 export function sendCsv(res: Response, filename: string, csv: string) {

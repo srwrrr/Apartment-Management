@@ -502,6 +502,15 @@
     transition: width 0.5s var(--ease-out-soft);
   }
 
+  /* A placeholder bar the size of the content still loading, so the page does not jump when it arrives. */
+  .skeleton {
+    display: block;
+    max-width: 100%;
+    border-radius: 0.5rem;
+    background: var(--color-neutral-soft);
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+
   .spinner {
     display: inline-block;
     width: 1.125rem;
@@ -624,6 +633,11 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.45;
   }
 }
 @keyframes fade-in {

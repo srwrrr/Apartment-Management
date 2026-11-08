@@ -11,7 +11,7 @@ function woff2(pkg: string, file: string): string {
 let css: string | null = null;
 
 /**
- * @font-face rules with the fonts embedded as data: URIs, so PDFs render identically everywhere
+ * `@font-face` rules with the fonts embedded as data: URIs, so PDFs render identically everywhere
  * and the page never needs network access. Noto Sans Bengali shapes conjunct letters correctly (NFR-28).
  */
 export function fontCss(): string {

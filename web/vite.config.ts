@@ -52,5 +52,9 @@ export default defineConfig({
   ],
   server: { port: 5173, proxy },
   preview: { proxy },
-  test: { environment: 'jsdom', globals: false },
+  test: {
+    environment: 'jsdom',
+    globals: false,
+    coverage: { provider: 'v8', include: ['src/**/*.{ts,tsx}'], reporter: ['text-summary', 'html', 'lcov'] },
+  },
 });

@@ -41,7 +41,8 @@ groupsRouter.get(
 groupsRouter.get(
   '/residents',
   asyncHandler(async (req, res) => {
-    const q = String(req.query.q ?? '').trim().slice(0, 100);
+    // ?q[a]=1 makes q an object; only a plain string is a search.
+    const q = (typeof req.query.q === 'string' ? req.query.q : '').trim().slice(0, 100);
     const items = q
       ? await prisma.user.findMany({
           where: { role: 'RESIDENT', isActive: true, fullName: { contains: q, mode: 'insensitive' } },

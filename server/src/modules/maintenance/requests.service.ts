@@ -127,7 +127,8 @@ async function loadFor(id: string, user: AuthUser) {
     if (user.role === 'RESIDENT') throw notFound();
     throw forbidden();
   }
-  return { r, access, audience: (user.role === 'RESIDENT' ? 'resident' : 'staff') as 'resident' | 'staff' };
+  const audience: 'resident' | 'staff' = user.role === 'RESIDENT' ? 'resident' : 'staff';
+  return { r, access, audience };
 }
 
 export async function getRequest(id: string, user: AuthUser) {

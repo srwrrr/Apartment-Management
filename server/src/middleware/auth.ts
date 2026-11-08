@@ -1,36 +1,32 @@
 import type { RequestHandler } from 'express';
 import { hasPermission, type Permission } from '@apt/shared';
 import { prisma } from '../lib/prisma';
-import { ApiError, forbidden } from '../lib/errors';
+import { ApiError, asyncHandler, forbidden } from '../lib/errors';
 
 /**
  * Loads the logged-in user from the session on every request, so permission changes and
  * deactivation take effect immediately (FR-06). Adds req.user, or leaves it undefined.
  */
-export const loadUser: RequestHandler = async (req, _res, next) => {
-  try {
-    const id = req.session?.userId;
-    if (!id) return next();
-    const u = await prisma.user.findUnique({ where: { id }, include: { permissions: true } });
-    if (!u || !u.isActive) {
-      await new Promise<void>((resolve) => req.session.destroy(() => resolve()));
-      return next();
-    }
-    req.user = {
-      id: u.id,
-      loginId: u.loginId,
-      fullName: u.fullName,
-      role: u.role,
-      language: u.language,
-      textSize: u.textSize,
-      mustChangePassword: u.mustChangePassword,
-      permissions: u.permissions.map((p) => p.permission),
-    };
-    next();
-  } catch (e) {
-    next(e);
+export const loadUser: RequestHandler = asyncHandler(async (req, _res, next) => {
+  const id = req.session?.userId;
+  if (!id) return next();
+  const u = await prisma.user.findUnique({ where: { id }, include: { permissions: true } });
+  if (!u || !u.isActive) {
+    await new Promise<void>((resolve) => req.session.destroy(() => resolve()));
+    return next();
   }
-};
+  req.user = {
+    id: u.id,
+    loginId: u.loginId,
+    fullName: u.fullName,
+    role: u.role,
+    language: u.language,
+    textSize: u.textSize,
+    mustChangePassword: u.mustChangePassword,
+    permissions: u.permissions.map((p) => p.permission),
+  };
+  next();
+});
 
 function authGate(allowPasswordChange: boolean): RequestHandler {
   return (req, _res, next) => {

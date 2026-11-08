@@ -35,6 +35,8 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
         working-directory: server
+      - name: Lint (code review rules)
+        run: npm run lint
       - run: npx prisma migrate deploy
         working-directory: server
       - name: Install the browser

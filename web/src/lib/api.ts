@@ -41,7 +41,7 @@ async function request<T>(method: string, url: string, body?: unknown, canRetry 
     res = await fetch(url, {
       method,
       headers,
-      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
       credentials: 'same-origin',
     });
   } catch {

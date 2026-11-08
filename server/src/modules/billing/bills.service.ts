@@ -251,8 +251,29 @@ async function planMonth(month: string): Promise<{ planned: PlannedBill[]; skipp
 }
 
 /**
- * Generates a month's bills for every occupied unit (FR-09). With dryRun it only reports what would happen.
- * The whole run is one transaction, and a unit can never get two bills for a month (BR-07).
+ * Generates a month's bills for every occupied unit (FR-09).
+ *
+ * Each unit gets the building's default fees, with the unit's own fees replacing the same charge type.
+ * Units that are unavailable, empty, already billed for the month (BR-07) or have no fees are skipped
+ * and listed with a reason. Bills, their charges, the billing contacts' notifications and the activity
+ * log entry are all saved in one transaction: either the whole run is saved or none of it is.
+ *
+ * @param input - The month (`YYYY-MM`) and an optional due date; without one, the building's usual due day is used.
+ * @param actor - The administrator running it, recorded as the creator of each bill.
+ * @param dryRun - When `true`, nothing is saved: the result is the preview shown before confirming.
+ * @returns A summary: how many bills (`count`) for what `total` in poisha, the units in `willCreate`,
+ *   the `skipped` units with their reasons, and `created` (0 for a dry run).
+ * @throws `ApiError` 400 `VALIDATION_FAILED` if the month is before 2000 or more than one month ahead,
+ *   or if the due date falls before the month starts.
+ * @throws `ApiError` 409 `BILLS_ALREADY_EXIST` if someone else generated the same month at the same moment.
+ *
+ * @example
+ * ```ts
+ * const preview = await generateBills({ month: '2026-11' }, admin, true);
+ * // preview.count === 20, preview.created === 0
+ * const result = await generateBills({ month: '2026-11' }, admin, false);
+ * // result.created === 20
+ * ```
  */
 export async function generateBills(input: z.infer<typeof generateBillsSchema>, actor: Actor, dryRun: boolean) {
   checkMonth(input.month);
