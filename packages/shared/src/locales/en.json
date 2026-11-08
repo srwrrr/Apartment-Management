@@ -116,7 +116,7 @@
   },
   "home": {
     "welcome": "Welcome, {{name}}",
-    "residentIntro": "Your apartment and contact details are below. Bills and maintenance requests are coming soon.",
+    "residentIntro": "What you owe, your apartment and quick links are below.",
     "staffIntro": "Use the menu to manage the building.",
     "yourUnits": "Your apartment",
     "noUnits": "You are not linked to an apartment yet. Please contact the building office.",
