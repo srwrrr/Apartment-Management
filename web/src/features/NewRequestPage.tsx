@@ -51,7 +51,7 @@ export function NewRequestPage() {
   return (
     <>
       <div className="mb-2">
-        <Link to="/requests" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+        <Link to="/requests" className="link-action">
           ← {t('maintenance.mineTitle')}
         </Link>
       </div>

@@ -85,7 +85,7 @@ function ImportCard({ kind }: { kind: Kind }) {
 
   return (
     <Card className="no-print-section">
-      <h2 className="mb-1 text-xl font-bold">{t(`import.${kind}`)}</h2>
+      <h2 className="mb-1 heading-section">{t(`import.${kind}`)}</h2>
       <p className="text-sm text-muted">{t(kind === 'units' ? 'import.unitsColumns' : 'import.residentsColumns')}</p>
       <p className="mb-3 text-sm text-muted">{t('import.maxRows', { max: MAX_ROWS[kind] })}</p>
 
@@ -95,11 +95,11 @@ function ImportCard({ kind }: { kind: Kind }) {
             <a
               href={`/api/import/templates/${kind}.csv`}
               download
-              className="inline-flex min-h-11 items-center rounded-lg border border-line px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50"
+              className="btn btn-secondary"
             >
               {t('import.downloadTemplate')}
             </a>
-            <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700 focus-within:outline focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-blue-600">
+            <label className="btn btn-primary focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
               {t('import.chooseFile')}
               <input ref={input} type="file" accept=".csv,text/csv" className="sr-only" onChange={onFile} disabled={busy} data-testid={`file-${kind}`} />
             </label>
@@ -152,8 +152,8 @@ function ImportCard({ kind }: { kind: Kind }) {
           <Notice tone="info">{t(kind === 'units' ? 'import.doneUnits' : 'import.doneResidents', { count: done.created ?? 0 })}</Notice>
           {done.credentials && done.credentials.length > 0 && (
             <div className="print-area space-y-3">
-              <h3 className="text-lg font-bold">{t('import.credentialsTitle')}</h3>
-              <p className="no-print text-sm font-medium text-danger-600">{t('import.credentialsHelp')}</p>
+              <h3 className="heading-card">{t('import.credentialsTitle')}</h3>
+              <p className="no-print text-sm font-medium text-danger">{t('import.credentialsHelp')}</p>
               <ScrollTable label={t('import.credentialsTitle')}>
                 <table className="w-full text-sm" data-testid="credentials">
                   <thead>

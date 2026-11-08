@@ -59,7 +59,7 @@ function AssignForm({ unit }: { unit: Unit }) {
       <Field label={t('units.resident')} error={fields.residentId}>
         {(p) =>
           picked ? (
-            <div className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-line bg-page px-3 py-2">
+            <div className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-line bg-raised px-3 py-2">
               <span className="font-semibold">{picked.fullName}</span>
               <Button variant="ghost" onClick={() => setPicked(null)}>
                 {t('common.edit')}
@@ -69,10 +69,10 @@ function AssignForm({ unit }: { unit: Unit }) {
             <>
               <TextInput {...p} type="search" placeholder={t('units.searchResident')} value={search} onChange={(e) => setSearch(e.target.value)} />
               {results.data && results.data.items.length > 0 && (
-                <ul className="mt-1 divide-y divide-line rounded-lg border border-line bg-white">
+                <ul className="mt-1 divide-y divide-line rounded-xl border border-line bg-panel">
                   {results.data.items.map((r) => (
                     <li key={r.id}>
-                      <button type="button" className="flex min-h-11 w-full flex-wrap justify-between gap-2 px-3 py-2 text-start hover:bg-brand-50" onClick={() => setPicked(r)}>
+                      <button type="button" className="flex min-h-11 w-full flex-wrap justify-between gap-2 px-3 py-2 text-start hover:bg-hover" onClick={() => setPicked(r)}>
                         <span className="font-semibold">{r.fullName}</span>
                         <span className="text-muted">{r.phone}</span>
                       </button>
@@ -194,13 +194,13 @@ export function UnitDetailPage() {
   return (
     <>
       <div className="mb-2">
-        <Link to="/units" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+        <Link to="/units" className="link-action">
           ← {t('nav.units')}
         </Link>
       </div>
       <PageHeader title={`${t('units.number')} ${u.unitNumber}`}>
         {BILL_READ_PERMISSIONS.some((p) => can(p)) && (
-          <Link to={`/units/${id}/statement`} className="inline-flex min-h-11 items-center rounded-lg border border-line px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50">
+          <Link to={`/units/${id}/statement`} className="btn btn-secondary">
             {t('statement.open')}
           </Link>
         )}
@@ -226,7 +226,7 @@ export function UnitDetailPage() {
 
       {can('residents.manage') && (
         <Card className="mt-4">
-          <h2 className="mb-3 text-xl font-bold">{t('units.history')}</h2>
+          <h2 className="mb-3 heading-section">{t('units.history')}</h2>
           {stays.isLoading ? (
             <Spinner />
           ) : stays.isError ? (
@@ -238,7 +238,7 @@ export function UnitDetailPage() {
               {all.map((o) => (
                 <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
                   <div className="min-w-40 flex-1">
-                    <Link to={`/residents/${o.resident?.id}`} className="font-semibold text-brand-700 underline">
+                    <Link to={`/residents/${o.resident?.id}`} className="font-semibold text-accent underline">
                       {o.resident?.fullName}
                     </Link>
                     <p className="text-sm text-muted">
@@ -259,7 +259,7 @@ export function UnitDetailPage() {
                         {t('units.endStay')}
                       </Button>
                       {user?.role === 'ADMIN' && (
-                        <Link to={`/occupancies/${o.id}/move-out`} className="inline-flex min-h-11 items-center rounded-lg bg-danger-600 px-4 py-2 font-semibold text-white hover:bg-red-800">
+                        <Link to={`/occupancies/${o.id}/move-out`} className="btn btn-danger">
                           {t('moveOut.button')}
                         </Link>
                       )}

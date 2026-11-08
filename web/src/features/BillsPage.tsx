@@ -6,6 +6,7 @@ import { BILL_STATUSES, MANUAL_CHARGE_TYPES, formatBDT, parseTaka } from '@apt/s
 import { useAuth } from '../app/auth';
 import { BillStatusChip } from '../components/BillStatusChip';
 import { Button, Card, Field, Modal, Notice, PageHeader, Pagination, Select, Spinner, TextInput, useDebounced } from '../components/ui';
+import { MonthInput } from '../components/MonthInput';
 import { api } from '../lib/api';
 import { errorMessage, fieldErrorsOf } from '../lib/errors';
 import { formatDate, monthLabel, thisMonth } from '../lib/format';
@@ -17,8 +18,8 @@ function BillRowLink({ bill, showUnit = true }: { bill: BillRow; showUnit?: bool
   const label = bill.kind === 'OPENING_BALANCE' ? t('billing.openingBalance') : monthLabel(bill.billingMonth);
   return (
     <li>
-      <Link to={`/bills/${bill.id}`} className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-brand-50">
-        {showUnit && <span className="min-w-14 text-xl font-bold">{bill.unit.unitNumber}</span>}
+      <Link to={`/bills/${bill.id}`} className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-hover">
+        {showUnit && <span className="min-w-14 heading-section">{bill.unit.unitNumber}</span>}
         <span className="min-w-36 flex-1">
           <span className="block font-semibold">{label}</span>
           <span className="block text-sm text-muted">{t('billing.dueOn', { date: formatDate(bill.dueDate) })}</span>
@@ -48,7 +49,7 @@ function ResidentBills() {
             <>
               <p className="text-muted">{t('billing.youOwe')}</p>
               <p className="text-3xl font-bold" data-testid="outstanding">{formatBDT(balance.data.outstanding)}</p>
-              {balance.data.overdueBills > 0 && <p className="mt-1 font-semibold text-danger-600">{t('billing.overdueCount', { count: balance.data.overdueBills })}</p>}
+              {balance.data.overdueBills > 0 && <p className="mt-1 font-semibold text-danger">{t('billing.overdueCount', { count: balance.data.overdueBills })}</p>}
             </>
           ) : (
             <p className="font-semibold">{t('billing.allPaid')}</p>
@@ -62,7 +63,7 @@ function ResidentBills() {
       ) : bills.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{t('billing.noBills')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {bills.data!.items.map((b) => (
               <BillRowLink key={b.id} bill={b} showUnit={false} />
@@ -117,7 +118,7 @@ function NewBillModal({ onClose }: { onClose: () => void }) {
         <Field label={t('billing.unit')} error={fields.unitId}>
           {(p) =>
             unit ? (
-              <div className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-line bg-page px-3 py-2">
+              <div className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-line bg-raised px-3 py-2">
                 <span className="font-semibold">{unit.unitNumber}</span>
                 <Button variant="ghost" onClick={() => setUnit(null)}>
                   {t('common.edit')}
@@ -127,10 +128,10 @@ function NewBillModal({ onClose }: { onClose: () => void }) {
               <>
                 <TextInput {...p} type="search" placeholder={t('units.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)} />
                 {units.data && units.data.items.length > 0 && (
-                  <ul className="mt-1 divide-y divide-line rounded-lg border border-line bg-white">
+                  <ul className="mt-1 divide-y divide-line rounded-xl border border-line bg-panel">
                     {units.data.items.map((u) => (
                       <li key={u.id}>
-                        <button type="button" className="flex min-h-11 w-full items-center justify-between px-3 py-2 text-start hover:bg-brand-50" onClick={() => setUnit(u)}>
+                        <button type="button" className="flex min-h-11 w-full items-center justify-between px-3 py-2 text-start hover:bg-hover" onClick={() => setUnit(u)}>
                           <span className="font-semibold">{u.unitNumber}</span>
                           <span className="text-muted">{t(`units.status.${u.status}`)}</span>
                         </button>
@@ -143,7 +144,7 @@ function NewBillModal({ onClose }: { onClose: () => void }) {
           }
         </Field>
         <Field label={t('billing.month')} error={fields.month}>
-          {(p) => <TextInput {...p} type="month" required value={month} onChange={(e) => setMonth(e.target.value)} />}
+          {(p) => <MonthInput {...p} required value={month} onChange={(e) => setMonth(e.target.value)} />}
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t('billing.chargeType')}>
@@ -205,7 +206,7 @@ function StaffBills() {
       <PageHeader title={t('billing.title')}>
         {can('billing.manage') && (
           <>
-            <Link to="/bills/generate" className="inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700">
+            <Link to="/bills/generate" className="btn btn-primary">
               {t('billing.generate')}
             </Link>
             <Button variant="secondary" onClick={() => setCreating(true)}>
@@ -228,7 +229,7 @@ function StaffBills() {
           )}
         </Field>
         <Field label={t('billing.filterMonth')}>
-          {(p) => <TextInput {...p} type="month" value={month} onChange={(e) => reset(setMonth)(e.target.value)} />}
+          {(p) => <MonthInput {...p} value={month} onChange={(e) => reset(setMonth)(e.target.value)} />}
         </Field>
         <Field label={t('billing.unit')}>
           {(p) => <TextInput {...p} type="search" value={q} onChange={(e) => reset(setQ)(e.target.value)} />}
@@ -255,7 +256,7 @@ function StaffBills() {
       ) : bills.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{t('billing.noBills')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {bills.data!.items.map((b) => (
               <BillRowLink key={b.id} bill={b} />

@@ -4,6 +4,7 @@ import '@fontsource/noto-sans/700.css';
 import '@fontsource/noto-sans-bengali/400.css';
 import '@fontsource/noto-sans-bengali/600.css';
 import '@fontsource/noto-sans-bengali/700.css';
+import '@fontsource-variable/manrope/wght.css';
 import './index.css';
 import './lib/i18n';
 import { StrictMode } from 'react';
@@ -12,6 +13,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './app/App';
 import { AuthProvider } from './app/auth';
+import { Ambient } from './components/Ambient';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false, staleTime: 15_000 } },
@@ -19,6 +21,7 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <Ambient />
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>

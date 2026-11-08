@@ -20,10 +20,10 @@ function RequestItem({ r, showSubmitter }: { r: RequestRow; showSubmitter?: bool
   const who = assigneeName(r);
   return (
     <li>
-      <Link to={`/requests/${r.id}`} className="block px-4 py-3 hover:bg-brand-50">
+      <Link to={`/requests/${r.id}`} className="block px-4 py-3 hover:bg-hover">
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="font-bold text-muted">#{r.number}</span>
-          <span className="min-w-40 flex-1 text-lg font-bold">{r.title}</span>
+          <span className="min-w-40 flex-1 heading-card">{r.title}</span>
           <span className="flex flex-wrap items-center gap-2">
             {r.overdue && <OverdueChip />}
             <PriorityChip priority={r.priority} />
@@ -47,7 +47,7 @@ function ResidentRequests() {
   return (
     <>
       <PageHeader title={t('maintenance.mineTitle')}>
-        <Link to="/requests/new" className="inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700">
+        <Link to="/requests/new" className="btn btn-primary">
           {t('maintenance.report')}
         </Link>
       </PageHeader>
@@ -58,7 +58,7 @@ function ResidentRequests() {
       ) : q.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{t('maintenance.noRequests')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {q.data!.items.map((r) => (
               <RequestItem key={r.id} r={r} />
@@ -84,7 +84,7 @@ function MyTasks() {
       ) : q.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{t('maintenance.noTasks')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {q.data!.items.map((r) => (
               <RequestItem key={r.id} r={r} />
@@ -131,7 +131,7 @@ function AllRequests() {
   return (
     <>
       <PageHeader title={t('maintenance.title')}>
-        <a href={`/api/requests/export.csv?${exportParams}`} download className="inline-flex min-h-11 items-center rounded-lg border border-line px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50">
+        <a href={`/api/requests/export.csv?${exportParams}`} download className="btn btn-secondary">
           {t('reports.exportCsv')}
         </a>
       </PageHeader>
@@ -206,7 +206,7 @@ function AllRequests() {
       ) : list.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{t('maintenance.noRequests')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {list.data!.items.map((r) => (
               <RequestItem key={r.id} r={r} showSubmitter />

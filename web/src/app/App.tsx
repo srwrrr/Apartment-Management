@@ -40,9 +40,9 @@ function NotFound() {
   const { t } = useTranslation();
   return (
     <div className="mx-auto max-w-md py-12 text-center">
-      <h1 className="mb-2 text-2xl font-bold">{t('notFound.title')}</h1>
+      <h1 className="heading-page mb-2">{t('notFound.title')}</h1>
       <p className="mb-6 text-muted">{t('notFound.body')}</p>
-      <Link to="/" className="font-semibold text-brand-700 underline">
+      <Link to="/" className="font-semibold text-accent underline">
         {t('denied.home')}
       </Link>
     </div>

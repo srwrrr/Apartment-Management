@@ -38,20 +38,20 @@ export function FeesPage() {
       <PageHeader title={t('fees.title')} />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-1 text-xl font-bold">{t('fees.defaultsTitle')}</h2>
+          <h2 className="mb-1 heading-section">{t('fees.defaultsTitle')}</h2>
           <p className="mb-1 text-sm text-muted">{t('fees.defaultsHelp')}</p>
           <p className="mb-4 text-sm font-semibold">{t('fees.futureOnly')}</p>
           <FeeEditor initial={data.defaults} saving={save.isPending} saved={saved} error={save.error} onSave={(fees) => save.mutate(fees)} />
         </Card>
         <Card>
-          <h2 className="mb-3 text-xl font-bold">{t('fees.overrides')}</h2>
+          <h2 className="mb-3 heading-section">{t('fees.overrides')}</h2>
           {data.units.length === 0 ? (
             <p className="text-muted">{t('fees.noOverrides')}</p>
           ) : (
             <ul className="divide-y divide-line">
               {data.units.map((u) => (
                 <li key={u.unitId} className="py-3">
-                  <Link to={`/units/${u.unitId}`} className="text-lg font-bold text-brand-700 underline">
+                  <Link to={`/units/${u.unitId}`} className="heading-card text-accent underline">
                     {u.unitNumber}
                   </Link>
                   <p className="text-sm text-muted">{u.fees.map((f) => `${t(`chargeTypes.${f.chargeType}`)} ${formatBDT(f.amount)}`).join(' · ')}</p>

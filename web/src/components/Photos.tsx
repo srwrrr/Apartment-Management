@@ -34,7 +34,7 @@ export function PhotoPicker({ files, onChange, error, id }: { files: File[]; onC
   return (
     <div className="space-y-2">
       {files.length < MAX_PHOTOS && (
-        <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-line bg-white px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50 focus-within:outline focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-blue-600">
+        <label className="btn btn-secondary focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
           {t('maintenance.addPhotos')}
           <input
             id={id}
@@ -63,7 +63,7 @@ export function PhotoPicker({ files, onChange, error, id }: { files: File[]; onC
         </ul>
       )}
       {shown && (
-        <p role="alert" className="text-sm font-medium text-danger-600">
+        <p role="alert" className="text-sm font-medium text-danger">
           {shown}
         </p>
       )}

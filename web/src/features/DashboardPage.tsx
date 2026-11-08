@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { formatBDT } from '@apt/shared';
 import { Button, Card, Chip, Field, Notice, ScrollTable, Spinner, TextInput } from '../components/ui';
+import { MonthInput } from '../components/MonthInput';
 import { api } from '../lib/api';
 import { errorMessage } from '../lib/errors';
 import { formatDate, monthLabel, monthShort, thisMonth } from '../lib/format';
@@ -14,18 +15,18 @@ const pct = (rate: number | null) => (rate === null ? '—' : `${rate}%`);
 
 function Stat({ label, value, id, tone }: { label: string; value: string | number; id: string; tone?: 'danger' }) {
   return (
-    <div className="rounded-lg border border-line p-3">
+    <div className="tile stat">
       <p className="text-sm text-muted">{label}</p>
-      <p className={`text-2xl font-bold ${tone === 'danger' ? 'text-danger-600' : ''}`} data-testid={id}>
+      <p className={`figure mt-0.5 ${typeof value === 'string' ? 'figure-fit' : ''} ${tone === 'danger' ? 'text-danger' : ''}`} data-testid={id}>
         {value}
       </p>
     </div>
   );
 }
 
-// Checked with the palette validator: they stay apart for colour-blind readers and against the white card.
-const BILLED = '#c0701a';
-const COLLECTED = '#00806a';
+// Checked with the palette validator: they stay apart for colour-blind readers and against the dark glass.
+const BILLED = 'var(--color-chart-billed)';
+const COLLECTED = 'var(--color-chart-collected)';
 
 /** FR-58: billed against collected on one scale, with the rate under each month, and the same numbers as a table. */
 function Trend({ months }: { months: DashboardData['trend'] }) {
@@ -36,7 +37,7 @@ function Trend({ months }: { months: DashboardData['trend'] }) {
   return (
     <>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-bold">{t('dashboard.trend')}</h2>
+        <h2 className="heading-section">{t('dashboard.trend')}</h2>
         <Button variant="secondary" aria-pressed={asTable} onClick={() => setAsTable(!asTable)}>
           {asTable ? t('dashboard.showChart') : t('dashboard.showTable')}
         </Button>
@@ -74,13 +75,13 @@ function Trend({ months }: { months: DashboardData['trend'] }) {
             {months.map((m) => {
               const summary = t('dashboard.trendSummary', { month: monthLabel(m.month), billed: formatBDT(m.billed), collected: formatBDT(m.collected), rate: pct(m.rate) });
               return (
-                <li key={m.month} title={summary} className="min-w-0 text-center">
+                <li key={m.month} title={summary} className="group min-w-0 text-center">
                   <span className="sr-only">{summary}</span>
-                  <span className="flex h-36 items-end justify-center gap-0.5 border-b border-ink" aria-hidden="true">
-                    <span className="w-1/3 max-w-5 rounded-t" style={{ height: height(m.billed), background: BILLED }} />
-                    <span className="w-1/3 max-w-5 rounded-t" style={{ height: height(m.collected), background: COLLECTED }} />
+                  <span className="flex h-44 items-end justify-center gap-[2px] border-b border-line-strong transition-colors group-hover:bg-raised" aria-hidden="true">
+                    <span className="w-1/3 max-w-4 rounded-t" style={{ height: height(m.billed), background: BILLED }} />
+                    <span className="w-1/3 max-w-4 rounded-t" style={{ height: height(m.collected), background: COLLECTED }} />
                   </span>
-                  <span className="mt-1 block text-xs text-muted" aria-hidden="true">{monthShort(m.month)}</span>
+                  <span className="mt-1.5 block text-xs text-muted" aria-hidden="true">{monthShort(m.month)}</span>
                   <span className="block text-sm font-semibold" aria-hidden="true">{pct(m.rate)}</span>
                 </li>
               );
@@ -103,13 +104,14 @@ export function Dashboard() {
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold">{t('dashboard.title')}</h2>
-        <Link to="/reports" className="inline-flex min-h-11 items-center rounded-lg border border-line px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50">
+        <h2 className="heading-section">{t('dashboard.title')}</h2>
+        <Link to="/reports" className="btn btn-secondary">
           {t('dashboard.reports')}
         </Link>
       </div>
+      <div className="mb-5 flex flex-wrap items-end gap-3">
       <form
-        className="mb-4 max-w-xl"
+        className="min-w-56 flex-1"
         role="search"
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
@@ -118,8 +120,9 @@ export function Dashboard() {
       >
         <Field label={t('search.label')}>{(p) => <TextInput {...p} type="search" value={term} onChange={(e) => setTerm(e.target.value)} />}</Field>
       </form>
-      <div className="mb-4 max-w-56">
-        <Field label={t('dashboard.month')}>{(p) => <TextInput {...p} type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} />}</Field>
+      <div className="w-full sm:w-52">
+        <Field label={t('dashboard.month')}>{(p) => <MonthInput {...p} value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} />}</Field>
+      </div>
       </div>
       {q.isLoading ? (
         <Spinner />
@@ -128,19 +131,24 @@ export function Dashboard() {
       ) : (
         <div className="space-y-4">
           <Card>
-            <h2 className="mb-3 text-xl font-bold">{t('dashboard.billing', { month: monthLabel(q.data!.month) })}</h2>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <h2 className="mb-3 heading-section">{t('dashboard.billing', { month: monthLabel(q.data!.month) })}</h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Stat id="dash-billed" label={t('dashboard.billed')} value={formatBDT(q.data!.billing.billed)} />
               <Stat id="dash-collected" label={t('dashboard.collected')} value={formatBDT(q.data!.billing.collected)} />
               <Stat id="dash-outstanding" label={t('dashboard.outstanding')} value={formatBDT(q.data!.billing.outstanding)} />
               <Stat id="dash-rate" label={t('dashboard.rate')} value={q.data!.billing.rate === null ? t('dashboard.noRate') : pct(q.data!.billing.rate)} />
             </div>
-            <p className="mt-3 font-semibold text-danger-600" data-testid="dash-overdue">
+            {q.data!.billing.rate !== null && (
+              <div className="meter mt-4" aria-hidden="true">
+                <span style={{ width: `${Math.min(q.data!.billing.rate, 100)}%` }} />
+              </div>
+            )}
+            <p className="mt-3 font-semibold text-danger" data-testid="dash-overdue">
               {q.data!.billing.overdueBills > 0 ? `${t('dashboard.overdueBills', { count: q.data!.billing.overdueBills })} (${formatBDT(q.data!.billing.overdueAmount)})` : ''}
             </p>
             {q.data!.billing.pendingReports > 0 && (
               <p>
-                <Link to="/payment-reports" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline" data-testid="dash-pending-reports">
+                <Link to="/payment-reports" className="link-action" data-testid="dash-pending-reports">
                   {t('dashboard.pendingReports', { count: q.data!.billing.pendingReports })}
                 </Link>
               </p>
@@ -150,7 +158,7 @@ export function Dashboard() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="mb-3 text-xl font-bold">{t('dashboard.building')}</h2>
+              <h2 className="mb-3 heading-section">{t('dashboard.building')}</h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <Stat id="dash-units" label={t('dashboard.totalUnits')} value={q.data!.building.totalUnits} />
                 <Stat id="dash-occupied" label={t('dashboard.occupied')} value={q.data!.building.occupied} />
@@ -160,8 +168,8 @@ export function Dashboard() {
               </div>
             </Card>
             <Card>
-              <h2 className="mb-3 text-xl font-bold">
-                <Link to="/requests" className="underline">
+              <h2 className="mb-3 heading-section">
+                <Link to="/requests" className="underline decoration-line-strong hover:decoration-accent">
                   {t('dashboard.maintenance')}
                 </Link>
               </h2>
@@ -179,10 +187,10 @@ export function Dashboard() {
           </Card>
 
           {q.data!.recent.activity && (
-            <Card className="!p-0">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
-                <h2 className="text-lg font-bold">{t('activity.recent')}</h2>
-                <Link to="/activity" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+            <Card className="card-flush">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2 sm:px-6">
+                <h2 className="heading-card">{t('activity.recent')}</h2>
+                <Link to="/activity" className="link-action">
                   {t('activity.seeAll')}
                 </Link>
               </div>
@@ -196,7 +204,7 @@ export function Dashboard() {
 
           <div className="grid gap-4 lg:grid-cols-3">
             <Card>
-              <h2 className="mb-2 text-lg font-bold">{t('dashboard.recentPayments')}</h2>
+              <h2 className="mb-2 heading-card">{t('dashboard.recentPayments')}</h2>
               {q.data!.recent.payments.length === 0 ? (
                 <p className="text-muted">{t('dashboard.none')}</p>
               ) : (
@@ -212,7 +220,7 @@ export function Dashboard() {
               )}
             </Card>
             <Card>
-              <h2 className="mb-2 text-lg font-bold">{t('dashboard.recentRequests')}</h2>
+              <h2 className="mb-2 heading-card">{t('dashboard.recentRequests')}</h2>
               {q.data!.recent.requests.length === 0 ? (
                 <p className="text-muted">{t('dashboard.none')}</p>
               ) : (
@@ -228,8 +236,8 @@ export function Dashboard() {
               )}
             </Card>
             <Card>
-              <h2 className="mb-2 text-lg font-bold">
-                <Link to="/announcements" className="underline">
+              <h2 className="mb-2 heading-card">
+                <Link to="/announcements" className="underline decoration-line-strong hover:decoration-accent">
                   {t('dashboard.recentAnnouncements')}
                 </Link>
               </h2>

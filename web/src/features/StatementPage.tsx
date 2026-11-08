@@ -41,7 +41,7 @@ function StatementView({ url, pdfUrl, queryKey }: { url: string; pdfUrl: string;
   return (
     <Card>
       <div className="no-print mb-3 flex justify-end">
-        <a href={pdfUrl} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+        <a href={pdfUrl} target="_blank" rel="noopener" className="link-action">
           {t('statement.downloadPdf')}
         </a>
       </div>
@@ -129,7 +129,7 @@ function CertificateList({ items }: { items: Certificate[] }) {
               {c.unit.unitNumber} · {c.issuedTo.fullName} · {formatDateTime(c.issuedAt)} · {monthLabel(c.coversThroughMonth)}
             </span>
           </span>
-          <a href={`/api/certificates/${c.id}/pdf`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+          <a href={`/api/certificates/${c.id}/pdf`} target="_blank" rel="noopener" className="link-action">
             {t('certificate.download')}
           </a>
         </li>
@@ -180,7 +180,7 @@ export function MyStatementPage() {
         </>
       )}
       <Card className="mt-4">
-        <h2 className="mb-2 text-xl font-bold">{t('certificate.mine')}</h2>
+        <h2 className="mb-2 heading-section">{t('certificate.mine')}</h2>
         {certificates.data && <CertificateList items={certificates.data.items} />}
       </Card>
     </>
@@ -197,7 +197,7 @@ export function UnitStatementPage() {
   return (
     <>
       <div className="mb-2">
-        <Link to={`/units/${id}`} className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+        <Link to={`/units/${id}`} className="link-action">
           ← {unit.data ? `${t('units.number')} ${unit.data.unitNumber}` : t('nav.units')}
         </Link>
       </div>
@@ -227,7 +227,7 @@ export function UnitCertificatesSection({ unitId, stays }: { unitId: string; sta
   if (!q.data) return null;
   return (
     <Card className="mt-4">
-      <h2 className="mb-2 text-xl font-bold">{t('certificate.section')}</h2>
+      <h2 className="mb-2 heading-section">{t('certificate.section')}</h2>
       <CertificateList items={q.data.items} />
       {user?.role === 'ADMIN' && (
         <div className="mt-3 border-t border-line pt-3">

@@ -123,12 +123,12 @@ export function UnitsPage() {
       ) : query.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{t('common.noResults')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {query.data!.items.map((u) => (
               <li key={u.id}>
-                <Link to={`/units/${u.id}`} className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-brand-50">
-                  <span className="min-w-16 text-xl font-bold">{u.unitNumber}</span>
+                <Link to={`/units/${u.id}`} className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-hover">
+                  <span className="min-w-16 heading-section">{u.unitNumber}</span>
                   <span className="text-muted">
                     {t('units.floor')} {u.floor}
                     {u.bedrooms != null && ` · ${u.bedrooms} ${t('units.bedrooms')}`}

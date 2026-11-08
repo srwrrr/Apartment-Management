@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { formatBDT } from '@apt/shared';
 import { Button, Card, Field, Notice, PageHeader, TextInput } from '../components/ui';
+import { MonthInput } from '../components/MonthInput';
 import { api } from '../lib/api';
 import { errorMessage, fieldErrorsOf } from '../lib/errors';
 import { formatDate, monthLabel, thisMonth } from '../lib/format';
@@ -55,7 +56,7 @@ export function GenerateBillsPage() {
   return (
     <>
       <div className="mb-2">
-        <Link to="/bills" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+        <Link to="/bills" className="link-action">
           ← {t('billing.title')}
         </Link>
       </div>
@@ -74,7 +75,7 @@ export function GenerateBillsPage() {
           {error != null && Object.keys(fields).length === 0 && <Notice>{errorMessage(t, error)}</Notice>}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t('generate.month')} error={fields.month}>
-              {(p) => <TextInput {...p} type="month" required value={month} onChange={(e) => change(setMonth)(e.target.value)} />}
+              {(p) => <MonthInput {...p} required value={month} onChange={(e) => change(setMonth)(e.target.value)} />}
             </Field>
             <Field label={t('generate.dueDate')} help={t('generate.dueHelp')} error={fields.dueDate}>
               {(p) => <TextInput {...p} type="date" value={dueDate} onChange={(e) => change(setDueDate)(e.target.value)} />}
@@ -88,7 +89,7 @@ export function GenerateBillsPage() {
 
       {plan && (
         <Card className="max-w-2xl space-y-4">
-          <h2 className="text-xl font-bold">{monthLabel(plan.month)}</h2>
+          <h2 className="heading-section">{monthLabel(plan.month)}</h2>
           {plan.count === 0 ? (
             <Notice tone="info">{t('generate.nothing')}</Notice>
           ) : (
@@ -132,7 +133,7 @@ export function GenerateBillsPage() {
       {done && (
         <Card className="max-w-2xl space-y-3">
           <Notice tone="info">{t('generate.done', { count: done.created })}</Notice>
-          <Link to="/bills" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+          <Link to="/bills" className="link-action">
             {t('generate.viewBills')}
           </Link>
         </Card>

@@ -44,6 +44,15 @@
     "permissions": "অনুমতি",
     "skipToContent": "মূল অংশে যান"
   },
+  "picker": {
+    "chooseMonth": "ক্যালেন্ডার খুলুন",
+    "calendar": "ক্যালেন্ডার",
+    "prevYear": "আগের বছর",
+    "nextYear": "পরের বছর",
+    "thisMonth": "এই মাস",
+    "clear": "মুছে ফেলুন",
+    "monthFormat": "YYYY-MM"
+  },
   "nav": {
     "home": "হোম",
     "units": "ইউনিট",
@@ -70,7 +79,16 @@
     "search": "খুঁজুন",
     "groups": "বাসিন্দা গ্রুপ",
     "emergency": "জরুরি যোগাযোগ",
-    "scheduledTasks": "নির্ধারিত কাজ"
+    "scheduledTasks": "নির্ধারিত কাজ",
+    "group": {
+      "overview": "সারসংক্ষেপ",
+      "building": "ভবন",
+      "money": "অর্থ",
+      "upkeep": "রক্ষণাবেক্ষণ",
+      "community": "কমিউনিটি",
+      "admin": "প্রশাসন",
+      "account": "অ্যাকাউন্ট"
+    }
   },
   "roles": {
     "RESIDENT": "বাসিন্দা",

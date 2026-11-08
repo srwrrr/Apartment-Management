@@ -84,7 +84,7 @@ export function ResidentDetailPage() {
   return (
     <>
       <div className="mb-2">
-        <Link to="/residents" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+        <Link to="/residents" className="link-action">
           ← {t('nav.residents')}
         </Link>
       </div>
@@ -126,14 +126,14 @@ export function ResidentDetailPage() {
           </dl>
         </Card>
         <Card>
-          <h2 className="mb-3 text-xl font-bold">{t('residents.stays')}</h2>
+          <h2 className="mb-3 heading-section">{t('residents.stays')}</h2>
           {r.occupancies.length === 0 ? (
             <p className="text-muted">{t('residents.noUnit')}</p>
           ) : (
             <ul className="divide-y divide-line">
               {r.occupancies.map((o) => (
                 <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3">
-                  <Link to={`/units/${o.unit.id}`} className="text-xl font-bold text-brand-700 underline">
+                  <Link to={`/units/${o.unit.id}`} className="heading-section text-accent underline">
                     {o.unit.unitNumber}
                   </Link>
                   <Chip tone="blue">{t(`units.type.${o.type}`)}</Chip>

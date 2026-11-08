@@ -64,13 +64,13 @@ export function NotificationsPage() {
       ) : list.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{t('notifications.empty')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {list.data!.items.map((n) => (
-              <li key={n.id} data-testid="notification" className={n.readAt ? '' : 'bg-brand-50'}>
-                <Link to={n.link} onClick={() => !n.readAt && readOne.mutate(n.id)} className="flex min-h-14 flex-col gap-1 px-4 py-3 hover:bg-brand-100">
+              <li key={n.id} data-testid="notification" className={n.readAt ? '' : 'bg-accent-soft'}>
+                <Link to={n.link} onClick={() => !n.readAt && readOne.mutate(n.id)} className="flex min-h-14 flex-col gap-1 px-4 py-3 hover:bg-hover">
                   <span className={n.readAt ? '' : 'font-bold'}>
-                    {!n.readAt && <span className="me-2 inline-block rounded-full bg-brand-600 px-2 py-0.5 text-sm font-semibold text-white">{t('notifications.unread')}</span>}
+                    {!n.readAt && <span className="me-2 inline-block rounded-full bg-primary px-2 py-0.5 text-sm font-semibold text-on-primary">{t('notifications.unread')}</span>}
                     {notificationText(t, n)}
                   </span>
                   <span className="text-sm text-muted">{formatDateTime(n.createdAt)}</span>

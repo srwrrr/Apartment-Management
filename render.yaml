@@ -1,0 +1,14 @@
+# Render Blueprint: New > Blueprint in the Render dashboard, pick this repository.
+# The database is on Neon (free PostgreSQL that does not expire); paste its connection string when asked.
+services:
+  - type: web
+    name: apartment-management
+    runtime: docker
+    plan: free
+    branch: srwr
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # asked for once, in the dashboard: the Neon connection string
+      - key: SESSION_SECRET
+        generateValue: true
