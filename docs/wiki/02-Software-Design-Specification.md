@@ -1,10 +1,10 @@
 # 2. Software Design Specification (SDS)
 
-This page describes how the system is built: its architecture, modules, data, interfaces, key algorithms and deployment. It describes the system **as built and deployed**. The full implementation specification is in [project_spec.md](https://github.com/srwrrr/Apartment-Management/blob/main/project_spec.md), and the requirements it satisfies are on the [SRS page](01-Software-Requirements-Specification).
+This page describes how the system is built: its architecture, modules, data, interfaces, key algorithms and deployment. It describes the system **as built and deployed**. The full implementation specification is in [project_spec.md](https://github.com/srwrrr/Apartment-Management/blob/main/project_spec.md), the core requirements are on the [SRS page](01-Software-Requirements-Specification), and every requirement ID used below is listed in the full [docs/SRS.md](https://github.com/srwrrr/Apartment-Management/blob/main/docs/SRS.md).
 
 ## 2.1 Purpose and scope
 
-The SRS states *what* the system must do: 58 functional requirements (29 Must, 19 Should, 10 Could), business rules (BR-xx) and quality targets (NFR-xx). This SDS states *how*: which parts the system is made of, how they communicate, how data is stored, and how the most important operations work. Requirement IDs (FR-xx, BR-xx, NFR-xx) are used throughout so every design decision can be traced back to a requirement.
+The SRS states *what* the system must do: functional requirements (FR-xx), business rules (BR-xx) and quality targets (NFR-xx). This SDS states *how*: which parts the system is made of, how they communicate, how data is stored, and how the most important operations work. Requirement IDs (FR-xx, BR-xx, NFR-xx) are used throughout so every design decision can be traced back to a requirement.
 
 ## 2.2 System overview
 

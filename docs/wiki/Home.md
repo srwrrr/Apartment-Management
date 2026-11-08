@@ -15,7 +15,7 @@ Each section of the final report has its own page:
 
 | # | Page | What it covers |
 |---|---|---|
-| 1 | [Software Requirements Specification](01-Software-Requirements-Specification) | All 58 requirements, business rules, quality targets and appendices |
+| 1 | [Software Requirements Specification](01-Software-Requirements-Specification) | The core requirements, key business rules and quality targets (full list in docs/SRS.md) |
 | 2 | [Software Design Specification](02-Software-Design-Specification) | Architecture, modules, data design, API, key algorithms, diagrams, security, deployment |
 | 3 | [Trello and Discord](03-Trello-and-Discord) | How the team planned, tracked and communicated |
 | 4 | [Architectural Pattern](04-Architectural-Pattern) | The layered, modular client-server pattern and how it is applied |
