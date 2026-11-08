@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { ArrowRight, Wrench } from 'lucide-react';
 import { useAuth } from '../app/auth';
 import { Card, Chip, Notice, PageHeader, Spinner } from '../components/ui';
 import { api } from '../lib/api';
@@ -19,13 +20,13 @@ function BalanceCard() {
       {q.data.outstanding > 0 ? (
         <>
           <p className="text-muted">{t('billing.youOwe')}</p>
-          <p className="text-3xl font-bold" data-testid="home-outstanding">{formatBDT(q.data.outstanding)}</p>
-          {q.data.overdueBills > 0 && <p className="mt-1 font-semibold text-danger-600">{t('billing.overdueCount', { count: q.data.overdueBills })}</p>}
+          <p className="figure-hero mt-1" data-testid="home-outstanding">{formatBDT(q.data.outstanding)}</p>
+          {q.data.overdueBills > 0 && <p className="mt-2"><Chip tone="red">{t('billing.overdueCount', { count: q.data.overdueBills })}</Chip></p>}
         </>
       ) : (
-        <p className="font-semibold">{t('billing.allPaid')}</p>
+        <p className="heading-section">{t('billing.allPaid')}</p>
       )}
-      <Link to="/bills" className="mt-2 inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+      <Link to="/bills" className="mt-2 link-action">
         {t('billing.viewBills')}
       </Link>
     </Card>
@@ -40,14 +41,14 @@ function ResidentHome() {
   const current = q.data!.occupancies.filter((o) => !o.endDate);
   return (
     <Card>
-      <h2 className="mb-3 text-xl font-bold">{t('home.yourUnits')}</h2>
+      <h2 className="mb-3 heading-section">{t('home.yourUnits')}</h2>
       {current.length === 0 ? (
         <p className="text-muted">{t('home.noUnits')}</p>
       ) : (
         <ul className="space-y-3">
           {current.map((o) => (
             <li key={o.id} className="flex flex-wrap items-center gap-3">
-              <span className="text-2xl font-bold">{o.unit.unitNumber}</span>
+              <span className="figure">{o.unit.unitNumber}</span>
               <Chip tone="blue">{t(`units.type.${o.type}`)}</Chip>
               <span className="text-muted">{t('profile.since', { date: formatDate(o.startDate) })}</span>
             </li>
@@ -84,28 +85,34 @@ export function HomePage() {
     <>
       <PageHeader title={t('home.welcome', { name: user.fullName })} />
       {user.role === 'RESIDENT' ? (
-        <div className="space-y-4">
-          <p className="text-muted">{t('home.residentIntro')}</p>
-          <BalanceCard />
-          <Link to="/requests/new" className="inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700">
-            {t('maintenance.report')}
-          </Link>
-          <ResidentHome />
-          <Link to="/profile" className="inline-block min-h-11 font-semibold text-brand-700 underline">
-            {t('nav.profile')}
-          </Link>
+        <div className="space-y-5">
+          <p className="max-w-2xl text-muted">{t('home.residentIntro')}</p>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <BalanceCard />
+            <ResidentHome />
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link to="/requests/new" className="btn btn-primary">
+              <Wrench className="size-4" aria-hidden="true" />
+              {t('maintenance.report')}
+            </Link>
+            <Link to="/profile" className="link-action">
+              {t('nav.profile')}
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
           <p className="text-muted">{t('home.staffIntro')}</p>
           {shortcuts.length > 0 && (
             <Card>
-              <h2 className="mb-3 text-xl font-bold">{t('home.shortcuts')}</h2>
-              <ul className="flex flex-wrap gap-3">
+              <h2 className="mb-3 heading-section">{t('home.shortcuts')}</h2>
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {shortcuts.map((s) => (
                   <li key={s.to}>
-                    <Link to={s.to} className="inline-flex min-h-11 items-center rounded-lg border border-line px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50">
+                    <Link to={s.to} className="tile tile-link flex min-h-16 items-center justify-between gap-2 font-semibold">
                       {s.label}
+                      <ArrowRight className="size-4 flex-none text-muted rtl:rotate-180" aria-hidden="true" />
                     </Link>
                   </li>
                 ))}

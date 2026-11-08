@@ -147,7 +147,7 @@ export function StaffPage() {
             <Card key={m.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-bold">{m.fullName}</h2>
+                  <h2 className="heading-card">{m.fullName}</h2>
                   <p className="text-sm text-muted">
                     {m.loginId} · {m.phone}
                   </p>

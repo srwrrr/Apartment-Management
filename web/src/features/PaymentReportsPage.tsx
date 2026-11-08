@@ -108,7 +108,7 @@ export function BillReportsCard({ bill }: { bill: BillDetail }) {
   return (
     <Card className="mt-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold">{t('paymentReports.onThisBill')}</h2>
+        <h2 className="heading-section">{t('paymentReports.onThisBill')}</h2>
         {resident && q.data.available > 0 && (
           <Button
             onClick={() => {
@@ -135,7 +135,7 @@ export function BillReportsCard({ bill }: { bill: BillDetail }) {
                 </span>
                 <Chip tone={statusTone[r.status]}>{t(`paymentReports.status.${r.status}`)}</Chip>
               </div>
-              {r.rejectReason && <p className="mt-1 text-sm font-medium text-danger-600">{r.rejectReason}</p>}
+              {r.rejectReason && <p className="mt-1 text-sm font-medium text-danger">{r.rejectReason}</p>}
             </li>
           ))}
         </ul>
@@ -297,7 +297,7 @@ export function PaymentReportsPage() {
               <Card>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-xl font-bold">
+                    <p className="heading-section">
                       {r.unitNumber} · {formatBDT(r.amount)}
                     </p>
                     <p className="text-muted">
@@ -307,17 +307,17 @@ export function PaymentReportsPage() {
                       {formatDate(r.paidOn)} · {t(`paymentMethods.${r.method}`, { defaultValue: r.method })} · <strong>{r.reference}</strong>
                     </p>
                     <p className="text-sm text-muted">{t('paymentReports.reportedBy', { name: r.reportedBy })}</p>
-                    {r.rejectReason && <p className="text-sm font-medium text-danger-600">{r.rejectReason}</p>}
+                    {r.rejectReason && <p className="text-sm font-medium text-danger">{r.rejectReason}</p>}
                   </div>
                   <div className="flex flex-wrap gap-3">
                     {r.screenshotId ? (
-                      <a href={`/api/attachments/${r.screenshotId}`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+                      <a href={`/api/attachments/${r.screenshotId}`} target="_blank" rel="noopener" className="link-action">
                         {t('paymentReports.viewScreenshot')}
                       </a>
                     ) : (
                       <span className="inline-flex min-h-11 items-center text-muted">{t('paymentReports.noScreenshot')}</span>
                     )}
-                    <Link to={`/bills/${r.billId}`} className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+                    <Link to={`/bills/${r.billId}`} className="link-action">
                       {t('paymentReports.openBill')}
                     </Link>
                   </div>

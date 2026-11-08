@@ -42,7 +42,7 @@ export function AnnouncementsPage() {
     <>
       <PageHeader title={t('announcements.title')}>
         {manage && (
-          <Link to="/announcements/new" className="inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700">
+          <Link to="/announcements/new" className="btn btn-primary">
             {t('announcements.new')}
           </Link>
         )}
@@ -82,11 +82,11 @@ export function AnnouncementsPage() {
       ) : q.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{past ? t('announcements.noPast') : t('announcements.empty')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {q.data!.items.map((a) => (
               <li key={a.id} data-testid="announcement">
-                <Link to={`/announcements/${a.id}`} className="block min-h-14 px-4 py-3 hover:bg-brand-50">
+                <Link to={`/announcements/${a.id}`} className="block min-h-14 px-4 py-3 hover:bg-hover">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className={`text-lg ${manage || a.read ? 'font-semibold' : 'font-bold'}`}>{a.title}</span>
                     {!manage && !a.read && <Chip tone="green">{t('announcements.unread')}</Chip>}
@@ -119,7 +119,7 @@ function ReadStatus({ id }: { id: string }) {
   if (!q.data) return null;
   return (
     <Card className="mt-4">
-      <h2 className="text-lg font-bold" data-testid="read-summary">
+      <h2 className="heading-card" data-testid="read-summary">
         {t('announcements.readBy', { read: q.data.read, recipients: q.data.recipients })}
       </h2>
       {q.data.unread.length === 0 ? (
@@ -159,7 +159,7 @@ function EditForm({ a, onDone }: { a: AnnouncementDetail; onDone: () => void }) 
   const fe = fieldErrorsOf(t, save.error);
   return (
     <Card>
-      <h2 className="mb-2 text-xl font-bold">{t('announcements.editTitle')}</h2>
+      <h2 className="mb-2 heading-section">{t('announcements.editTitle')}</h2>
       <p className="mb-3 text-muted">{t('announcements.editNote')}</p>
       <form
         className="space-y-4"
@@ -240,7 +240,7 @@ export function AnnouncementDetailPage() {
   return (
     <>
       <p className="mb-2">
-        <Link to="/announcements" className="font-semibold text-brand-700 underline">
+        <Link to="/announcements" className="font-semibold text-accent underline">
           ← {t('announcements.title')}
         </Link>
       </p>
@@ -273,7 +273,7 @@ export function AnnouncementDetailPage() {
               <Button variant="secondary" onClick={() => setEditing(true)}>
                 {t('common.edit')}
               </Button>
-              <a href={`/api/announcements/${id}/notice.pdf`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center rounded-lg border border-line px-4 py-2 font-semibold text-brand-700 hover:bg-brand-50">
+              <a href={`/api/announcements/${id}/notice.pdf`} target="_blank" rel="noopener" className="btn btn-secondary">
                 {t('announcements.printNotice')}
               </a>
               <Button

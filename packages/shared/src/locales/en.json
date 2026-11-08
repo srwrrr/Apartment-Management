@@ -44,6 +44,15 @@
     "permissions": "Permissions",
     "skipToContent": "Skip to content"
   },
+  "picker": {
+    "chooseMonth": "Open calendar",
+    "calendar": "Calendar",
+    "prevYear": "Previous year",
+    "nextYear": "Next year",
+    "thisMonth": "This month",
+    "clear": "Clear",
+    "monthFormat": "YYYY-MM"
+  },
   "nav": {
     "home": "Home",
     "units": "Units",
@@ -70,7 +79,16 @@
     "search": "Search",
     "groups": "Resident groups",
     "emergency": "Emergency contacts",
-    "scheduledTasks": "Scheduled jobs"
+    "scheduledTasks": "Scheduled jobs",
+    "group": {
+      "overview": "Overview",
+      "building": "Building",
+      "money": "Money",
+      "upkeep": "Upkeep",
+      "community": "Community",
+      "admin": "Administration",
+      "account": "Account"
+    }
   },
   "roles": {
     "RESIDENT": "Resident",

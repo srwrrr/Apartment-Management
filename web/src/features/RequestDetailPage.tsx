@@ -49,7 +49,7 @@ function NoteAction({ req, to, label, noteLabel, variant = 'secondary', confirmL
   }
   return (
     <form
-      className="w-full space-y-3 rounded-lg border border-line p-3"
+      className="w-full space-y-3 tile"
       noValidate
       onSubmit={(e: FormEvent) => {
         e.preventDefault();
@@ -107,7 +107,7 @@ function ResidentActions({ req }: { req: RequestDetail }) {
   if (req.status === 'SUBMITTED') {
     return (
       <Card>
-        <h2 className="mb-3 text-xl font-bold">{t('maintenance.actions')}</h2>
+        <h2 className="mb-3 heading-section">{t('maintenance.actions')}</h2>
         <div className="flex flex-wrap gap-2">
           <QuickAction req={req} to="CANCELLED" variant="danger" label={t('maintenance.cancel')} confirm={t('maintenance.confirmCancel')} />
         </div>
@@ -117,7 +117,7 @@ function ResidentActions({ req }: { req: RequestDetail }) {
   if (req.status === 'RESOLVED') {
     return (
       <Card>
-        <h2 className="mb-2 text-xl font-bold">{t('maintenance.actions')}</h2>
+        <h2 className="mb-2 heading-section">{t('maintenance.actions')}</h2>
         <p className="mb-3">{t('maintenance.resolvedQuestion')}</p>
         <div className="flex flex-wrap gap-2">
           <QuickAction req={req} to="CLOSED" label={t('maintenance.fixed')} />
@@ -231,7 +231,7 @@ function StaffActions({ req }: { req: RequestDetail }) {
 
   return (
     <Card>
-      <h2 className="mb-3 text-xl font-bold">{t('maintenance.staffActions')}</h2>
+      <h2 className="mb-3 heading-section">{t('maintenance.staffActions')}</h2>
       <div className="space-y-4">
         {rows}
         {buttons.length > 0 && <div className="flex flex-wrap gap-2">{buttons}</div>}
@@ -266,7 +266,7 @@ function NoteForm({ req }: { req: RequestDetail }) {
   const fields = fieldErrorsOf(t, add.error);
   return (
     <Card>
-      <h2 className="mb-3 text-xl font-bold">{t('maintenance.addNote')}</h2>
+      <h2 className="mb-3 heading-section">{t('maintenance.addNote')}</h2>
       <form
         className="space-y-3"
         noValidate
@@ -316,7 +316,7 @@ function Timeline({ req }: { req: RequestDetail }) {
 
   return (
     <Card>
-      <h2 className="mb-3 text-xl font-bold">{t('maintenance.timeline')}</h2>
+      <h2 className="mb-3 heading-section">{t('maintenance.timeline')}</h2>
       <ol className="space-y-4" data-testid="timeline">
         {req.updates.map((u) => (
           <li key={u.id} className="border-s-4 border-line ps-3" data-testid="update">
@@ -348,7 +348,7 @@ function RatingForm({ req }: { req: RequestDetail }) {
   const send = useMutation({ mutationFn: () => api.post<RequestDetail>(`/api/requests/${req.id}/rating`, { stars, comment }), onSuccess: refresh });
   return (
     <Card>
-      <h2 className="text-xl font-bold">{t('rating.title')}</h2>
+      <h2 className="heading-section">{t('rating.title')}</h2>
       <p className="mb-3 text-muted">{t('rating.help')}</p>
       <form
         className="space-y-3"
@@ -361,7 +361,7 @@ function RatingForm({ req }: { req: RequestDetail }) {
           <legend className="mb-1 font-semibold">{t('rating.stars')}</legend>
           <div className="flex flex-wrap gap-1">
             {[1, 2, 3, 4, 5].map((n) => (
-              <label key={n} className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg border border-line px-2 font-bold has-[:checked]:border-brand-700 has-[:checked]:bg-brand-100 has-[:focus-visible]:outline-2">
+              <label key={n} className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-xl border border-line-strong px-2 font-bold transition-colors hover:bg-hover has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:focus-visible]:outline-2">
                 <input type="radio" name="stars" className="sr-only" value={n} checked={stars === n} onChange={() => setStars(n)} />
                 <span aria-hidden="true">{n} ★</span>
                 <span className="sr-only">{t('rating.star', { count: n })}</span>
@@ -381,8 +381,8 @@ function RatingCard({ rating, own }: { rating: NonNullable<RequestDetail['rating
   const { t } = useTranslation();
   return (
     <Card>
-      <h2 className="text-lg font-bold">{own ? t('rating.yours') : t('rating.given')}</h2>
-      <p className="text-xl font-bold" data-testid="rating">{t('rating.star', { count: rating.stars })}</p>
+      <h2 className="heading-card">{own ? t('rating.yours') : t('rating.given')}</h2>
+      <p className="heading-section" data-testid="rating">{t('rating.star', { count: rating.stars })}</p>
       {rating.comment && <p className="mt-1 whitespace-pre-wrap">{rating.comment}</p>}
     </Card>
   );
@@ -406,7 +406,7 @@ export function RequestDetailPage() {
   return (
     <>
       <div className="mb-2">
-        <Link to="/requests" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+        <Link to="/requests" className="link-action">
           ← {resident ? t('maintenance.mineTitle') : user?.role === 'STAFF' && !can('maintenance.view_all') && !can('maintenance.review') && !can('maintenance.assign') ? t('maintenance.tasksTitle') : t('maintenance.title')}
         </Link>
       </div>
@@ -444,7 +444,7 @@ export function RequestDetailPage() {
               <dd className="font-bold">{r.submittedBy?.fullName ?? t('maintenance.system')}</dd>
               {r.submittedBy?.phone && (
                 <dd>
-                  <a href={`tel:${r.submittedBy.phone}`} className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+                  <a href={`tel:${r.submittedBy.phone}`} className="link-action">
                     {r.submittedBy.phone}
                   </a>
                 </dd>

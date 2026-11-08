@@ -33,11 +33,11 @@ export function GroupsPage() {
       ) : q.data!.items.length === 0 ? (
         <p className="py-4 text-muted">{t('groups.empty')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {q.data!.items.map((g) => (
               <li key={g.id} data-testid="group">
-                <Link to={`/groups/${g.id}`} className="block min-h-14 px-4 py-3 hover:bg-brand-50">
+                <Link to={`/groups/${g.id}`} className="block min-h-14 px-4 py-3 hover:bg-hover">
                   <span className="block text-lg font-semibold">{g.name}</span>
                   <span className="block text-sm text-muted">{g.members === 1 ? t('groups.oneMember') : t('groups.memberCount', { count: g.members })}</span>
                 </Link>
@@ -47,7 +47,7 @@ export function GroupsPage() {
         </Card>
       )}
       <Card className="mt-4">
-        <h2 className="mb-3 text-xl font-bold">{t('groups.new')}</h2>
+        <h2 className="mb-3 heading-section">{t('groups.new')}</h2>
         <form
           className="flex flex-wrap items-end gap-3"
           noValidate
@@ -109,7 +109,7 @@ export function GroupDetailPage() {
   return (
     <>
       <p className="mb-2">
-        <Link to="/groups" className="font-semibold text-brand-700 underline">← {t('groups.title')}</Link>
+        <Link to="/groups" className="font-semibold text-accent underline">← {t('groups.title')}</Link>
       </p>
       <PageHeader title={g.name}>
         <Button variant="secondary" onClick={() => setName(g.name)}>{t('groups.rename')}</Button>
@@ -142,7 +142,7 @@ export function GroupDetailPage() {
         </Card>
       )}
       <Card>
-        <h2 className="mb-3 text-xl font-bold">{t('groups.members')}</h2>
+        <h2 className="mb-3 heading-section">{t('groups.members')}</h2>
         {g.members.length === 0 ? (
           <p className="text-muted">{t('groups.noMembers')}</p>
         ) : (

@@ -64,12 +64,12 @@ export function MoveOutPage() {
           {result.certificate && (
             <p className="mb-3" data-testid="moveout-certificate">
               {t('moveOut.certificateNumber', { number: result.certificate.number })}{' '}
-              <a href={`/api/certificates/${result.certificate.id}/pdf`} target="_blank" rel="noopener" className="font-semibold text-brand-700 underline">
+              <a href={`/api/certificates/${result.certificate.id}/pdf`} target="_blank" rel="noopener" className="font-semibold text-accent underline">
                 {t('certificate.download')}
               </a>
             </p>
           )}
-          <Link to={`/units/${result.unitId}`} className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+          <Link to={`/units/${result.unitId}`} className="link-action">
             ← {t('nav.units')}
           </Link>
         </Card>
@@ -88,7 +88,7 @@ export function MoveOutPage() {
   return (
     <>
       <div className="mb-2">
-        <Link to={`/units/${p.unit.id}`} className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+        <Link to={`/units/${p.unit.id}`} className="link-action">
           ← {t('units.number')} {p.unit.unitNumber}
         </Link>
       </div>
@@ -101,10 +101,10 @@ export function MoveOutPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-2 text-xl font-bold">{t('moveOut.dues')}</h2>
+          <h2 className="mb-2 heading-section">{t('moveOut.dues')}</h2>
           {owes ? (
             <>
-              <p className="text-lg font-bold text-danger-600" data-testid="moveout-balance">
+              <p className="heading-card text-danger" data-testid="moveout-balance">
                 {t('moveOut.owed', { amount: formatBDT(p.balance) })}
               </p>
               <ul className="my-2">
@@ -142,7 +142,7 @@ export function MoveOutPage() {
 
         {p.openRequests.length > 0 && (
           <Card>
-            <h2 className="mb-2 text-lg font-bold">{t('moveOut.openRequests')}</h2>
+            <h2 className="mb-2 heading-card">{t('moveOut.openRequests')}</h2>
             <ul className="list-disc ps-6">
               {p.openRequests.map((r) => (
                 <li key={r.id}>
@@ -196,7 +196,7 @@ export function MoveOutPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-2 text-xl font-bold">{t('moveOut.summary')}</h2>
+          <h2 className="mb-2 heading-section">{t('moveOut.summary')}</h2>
           <ul className="list-disc space-y-1 ps-6" data-testid="moveout-summary">
             <li>{t('moveOut.sumEnd', { date: formatDate(endDate) })}</li>
             {heir && <li>{t('moveOut.sumContact', { name: heir.fullName })}</li>}

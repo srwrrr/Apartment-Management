@@ -46,7 +46,7 @@ export function ProfilePage() {
       <PageHeader title={t('profile.title')} />
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <h2 className="mb-1 text-xl font-bold">{p.fullName}</h2>
+          <h2 className="mb-1 heading-section">{p.fullName}</h2>
           <p className="mb-4 text-muted">{p.loginId}</p>
           <form
             className="space-y-4"
@@ -78,15 +78,15 @@ export function ProfilePage() {
           </form>
         </Card>
         <Card>
-          <h2 className="mb-3 text-xl font-bold">{t('profile.yourStays')}</h2>
+          <h2 className="mb-3 heading-section">{t('profile.yourStays')}</h2>
           {p.occupancies.length === 0 ? (
             <p className="text-muted">{t('home.noUnits')}</p>
           ) : (
             <ul className="space-y-3">
               {p.occupancies.map((o) => (
-                <li key={o.id} className="rounded-lg border border-line p-3">
+                <li key={o.id} className="tile">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xl font-bold">{o.unit.unitNumber}</span>
+                    <span className="heading-section">{o.unit.unitNumber}</span>
                     <Chip tone="blue">{t(`units.type.${o.type}`)}</Chip>
                     {!o.endDate && <Chip tone="green">{t('common.active')}</Chip>}
                   </div>

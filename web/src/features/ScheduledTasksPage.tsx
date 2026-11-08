@@ -104,7 +104,7 @@ export function ScheduledTasksPage() {
       ) : q.data!.items.length === 0 ? (
         <p className="py-4 text-muted">{t('scheduled.empty')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {q.data!.items.map((x) => (
               <li key={x.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3" data-testid="scheduled-task">
@@ -129,7 +129,7 @@ export function ScheduledTasksPage() {
       )}
       {toggle.isError && <div className="mt-3"><Notice>{errorMessage(t, toggle.error)}</Notice></div>}
       <Card className="mt-4">
-        <h2 className="mb-3 text-xl font-bold">{t('scheduled.upcoming')}</h2>
+        <h2 className="mb-3 heading-section">{t('scheduled.upcoming')}</h2>
         {upcoming.data && upcoming.data.items.length === 0 ? (
           <p className="text-muted">{t('scheduled.noneUpcoming')}</p>
         ) : (

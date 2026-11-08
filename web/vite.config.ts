@@ -20,8 +20,8 @@ export default defineConfig({
         name: 'Apartment Management',
         short_name: 'Apartment',
         description: 'Bills, payments, maintenance and notices for your building.',
-        theme_color: '#0f5c4d',
-        background_color: '#f6f8f7',
+        theme_color: '#0a1512',
+        background_color: '#0a1512',
         display: 'standalone',
         start_url: '/',
         icons: [

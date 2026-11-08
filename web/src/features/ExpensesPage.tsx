@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { EXPENSE_CATEGORIES, formatBDT, parseTaka } from '@apt/shared';
 import { Button, Card, Chip, Field, Modal, Notice, PageHeader, Pagination, Select, Spinner, TextInput } from '../components/ui';
+import { MonthInput } from '../components/MonthInput';
 import { api } from '../lib/api';
 import { errorMessage, fieldErrorsOf } from '../lib/errors';
 import { formatDate, takaString, thisMonth, todayYmd } from '../lib/format';
@@ -174,9 +175,8 @@ export function ExpensesPage() {
         </Field>
         <Field label={t('expenses.month')}>
           {(p) => (
-            <TextInput
+            <MonthInput
               {...p}
-              type="month"
               value={month}
               onChange={(e) => {
                 setMonth(e.target.value);
@@ -194,10 +194,10 @@ export function ExpensesPage() {
         <p className="py-6 text-muted">{t('expenses.empty')}</p>
       ) : (
         <>
-          <p className="mb-2 text-lg font-bold" data-testid="expenses-total">
+          <p className="mb-2 heading-card" data-testid="expenses-total">
             {t('expenses.total', { amount: formatBDT(q.data!.totalAmount) })}
           </p>
-          <Card className="!p-0">
+          <Card className="card-flush">
             <ul className="divide-y divide-line">
               {q.data!.items.map((e) => (
                 <li key={e.id} className="px-4 py-3" data-testid="expense">
@@ -213,7 +213,7 @@ export function ExpensesPage() {
                     </span>
                     {e.voided && <Chip tone="red">{t('expenses.voided')}</Chip>}
                     {e.receiptId && (
-                      <a href={`/api/attachments/${e.receiptId}`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+                      <a href={`/api/attachments/${e.receiptId}`} target="_blank" rel="noopener" className="link-action">
                         {t('expenses.viewReceipt')}
                       </a>
                     )}
@@ -230,7 +230,7 @@ export function ExpensesPage() {
                   </div>
                   <p className="text-sm text-muted">{t('expenses.recordedBy', { name: e.recordedBy })}</p>
                   {e.voided && (
-                    <p className="text-sm font-medium text-danger-600">
+                    <p className="text-sm font-medium text-danger">
                       {e.voidReason}
                       {e.voidedBy ? ` — ${t('billing.voidedBy', { name: e.voidedBy })}` : ''}
                     </p>
@@ -258,7 +258,7 @@ export function BuildingSummaryPage() {
     <>
       <PageHeader title={t('buildingSummary.title')} />
       <div className="mb-4 max-w-56">
-        <Field label={t('buildingSummary.month')}>{(p) => <TextInput {...p} type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} />}</Field>
+        <Field label={t('buildingSummary.month')}>{(p) => <MonthInput {...p} value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} />}</Field>
       </div>
       {q.isLoading ? (
         <Spinner />
@@ -276,7 +276,7 @@ export function BuildingSummaryPage() {
               </li>
             ))}
           </ul>
-          <p className="mt-3 flex justify-between text-lg font-bold">
+          <p className="mt-3 flex justify-between heading-card">
             <span>{t('buildingSummary.total')}</span>
             <span data-testid="summary-total">{formatBDT(q.data!.total)}</span>
           </p>

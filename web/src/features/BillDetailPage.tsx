@@ -106,7 +106,7 @@ function ChargesCard({ bill }: { bill: BillDetail }) {
   return (
     <Card>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-bold">{t('billing.charges')}</h2>
+        <h2 className="heading-section">{t('billing.charges')}</h2>
         {canEdit && !isOpening && <Button variant="secondary" onClick={() => setModal({})}>{t('billing.addCharge')}</Button>}
       </div>
       {remove.isError && <div className="mb-3"><Notice>{errorMessage(t, remove.error)}</Notice></div>}
@@ -139,7 +139,7 @@ function ChargesCard({ bill }: { bill: BillDetail }) {
           </li>
         ))}
       </ul>
-      <p className="mt-3 flex justify-between border-t border-line pt-3 text-lg font-bold">
+      <p className="mt-3 flex justify-between border-t border-line pt-3 heading-card">
         <span>{t('billing.total')}</span>
         <span data-testid="bill-total">{formatBDT(bill.total)}</span>
       </p>
@@ -295,7 +295,7 @@ function PaymentsCard({ bill }: { bill: BillDetail }) {
 
   return (
     <Card>
-      <h2 className="mb-3 text-xl font-bold">{t('billing.payments')}</h2>
+      <h2 className="mb-3 heading-section">{t('billing.payments')}</h2>
       {bill.payments.length === 0 ? (
         <p className="text-muted">{t('billing.noPayments')}</p>
       ) : (
@@ -311,7 +311,7 @@ function PaymentsCard({ bill }: { bill: BillDetail }) {
                   </span>
                 </span>
                 {p.voided && <Chip tone="red">{t('billing.voided')}</Chip>}
-                <a href={`/api/payments/${p.id}/receipt.pdf`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+                <a href={`/api/payments/${p.id}/receipt.pdf`} target="_blank" rel="noopener" className="link-action">
                   {t('billing.downloadReceipt')}
                 </a>
                 {user?.role === 'ADMIN' && !p.voided && (
@@ -325,7 +325,7 @@ function PaymentsCard({ bill }: { bill: BillDetail }) {
                 {p.recordedBy ? ` · ${t('billing.recordedBy', { name: p.recordedBy })}` : ''}
               </p>
               {p.voided && (
-                <p className="text-sm font-medium text-danger-600">
+                <p className="text-sm font-medium text-danger">
                   {p.voidReason}
                   {p.voidedBy ? ` — ${t('billing.voidedBy', { name: p.voidedBy })}` : ''}
                 </p>
@@ -371,7 +371,7 @@ export function BillDetailPage() {
   return (
     <>
       <div className="mb-2">
-        <Link to="/bills" className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+        <Link to="/bills" className="link-action">
           ← {user?.role === 'RESIDENT' ? t('billing.mineTitle') : t('billing.title')}
         </Link>
       </div>
@@ -400,7 +400,7 @@ export function BillDetailPage() {
             <dt className="text-sm text-muted">{t('billing.unit')}</dt>
             <dd className="font-bold">
               {canSeeUnits ? (
-                <Link to={`/units/${b.unit.id}`} className="text-brand-700 underline">
+                <Link to={`/units/${b.unit.id}`} className="text-accent underline">
                   {b.unit.unitNumber}
                 </Link>
               ) : (
@@ -418,7 +418,7 @@ export function BillDetailPage() {
           </div>
           <div>
             <dt className="text-sm text-muted">{t('billing.balance')}</dt>
-            <dd className="text-xl font-bold" data-testid="bill-balance">{formatBDT(b.balance)}</dd>
+            <dd className="heading-section" data-testid="bill-balance">{formatBDT(b.balance)}</dd>
           </div>
         </dl>
         {b.billingContact && (

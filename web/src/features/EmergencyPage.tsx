@@ -37,7 +37,7 @@ function Editor({ items }: { items: EmergencyContact[] }) {
 
   return (
     <Card className="mt-4">
-      <h2 className="mb-1 text-xl font-bold">{t('common.edit')}</h2>
+      <h2 className="mb-1 heading-section">{t('common.edit')}</h2>
       <p className="mb-4 text-muted">{t('emergency.manageHelp')}</p>
       <form
         className="space-y-4"
@@ -48,7 +48,7 @@ function Editor({ items }: { items: EmergencyContact[] }) {
         }}
       >
         {rows.map((r, i) => (
-          <fieldset key={i} className="space-y-3 rounded-lg border border-line p-3" data-testid="emergency-row">
+          <fieldset key={i} className="space-y-3 tile" data-testid="emergency-row">
             <legend className="px-1 font-semibold">{t('emergency.contact', { number: i + 1 })}</legend>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label={t('emergency.name')} error={fe[`contacts.${i}.name`]}>{(p) => <TextInput {...p} value={r.name} onChange={(e) => change(i, { name: e.target.value })} />}</Field>
@@ -90,17 +90,17 @@ export function EmergencyPage() {
       ) : q.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{t('emergency.empty')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {q.data!.items.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3" data-testid="emergency-contact">
                 <span className="min-w-40 flex-1">
-                  <span className="block text-lg font-bold">{c.name}</span>
+                  <span className="block heading-card">{c.name}</span>
                   <span className="block text-sm text-muted">
                     {c.role} · {c.hours}
                   </span>
                 </span>
-                <a href={`tel:${c.phone.replace(/[\s-]/g, '')}`} className="inline-flex min-h-11 items-center text-lg font-bold text-brand-700 underline">
+                <a href={`tel:${c.phone.replace(/[\s-]/g, '')}`} className="inline-flex min-h-11 items-center heading-card text-accent underline">
                   <span className="sr-only">{t('emergency.call', { name: c.name })}: </span>
                   {c.phone}
                 </a>

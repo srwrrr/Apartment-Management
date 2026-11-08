@@ -49,7 +49,7 @@ export function ActivityRow({ e }: { e: ActivityEntry }) {
         {link && (
           <>
             {' '}
-            <Link to={link} className="font-semibold text-brand-700 underline">
+            <Link to={link} className="font-semibold text-accent underline">
               {t('activity.open')}
             </Link>
           </>
@@ -124,7 +124,7 @@ export function ActivityPage() {
       ) : q.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{t('activity.empty')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {q.data!.items.map((e) => (
               <ActivityRow key={e.id} e={e} />

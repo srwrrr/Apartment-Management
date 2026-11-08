@@ -54,13 +54,13 @@ export function DirectoryPage() {
       ) : query.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{t('directory.empty')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {query.data!.items.map((e) => (
               <li key={e.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-                <span className="min-w-14 text-xl font-bold">
+                <span className="min-w-14 heading-section">
                   {can('units.manage') || can('residents.manage') ? (
-                    <Link to={`/units/${e.unit.id}`} className="text-brand-700 underline">
+                    <Link to={`/units/${e.unit.id}`} className="text-accent underline">
                       {e.unit.unitNumber}
                     </Link>
                   ) : (
@@ -71,7 +71,7 @@ export function DirectoryPage() {
                 <Chip tone="blue">{t(`units.type.${e.type}`)}</Chip>
                 <a
                   href={`tel:${e.resident.phone}`}
-                  className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline"
+                  className="link-action"
                 >
                   {e.resident.phone}
                   <span className="sr-only"> ({t('directory.call', { name: e.resident.fullName })})</span>

@@ -26,7 +26,7 @@ export function UnitFeesSection({ unitId }: { unitId: string }) {
   });
   return (
     <Card className="mt-4">
-      <h2 className="mb-1 text-xl font-bold">{t('fees.unitTitle')}</h2>
+      <h2 className="mb-1 heading-section">{t('fees.unitTitle')}</h2>
       <p className="mb-1 text-sm text-muted">{t('fees.unitHelp')}</p>
       <p className="mb-4 text-sm font-semibold">{t('fees.futureOnly')}</p>
       {q.isLoading ? (
@@ -73,14 +73,14 @@ export function OpeningBalanceSection({ unitId }: { unitId: string }) {
   const bill = existing.data?.items[0];
   return (
     <Card className="mt-4">
-      <h2 className="mb-1 text-xl font-bold">{t('opening.title')}</h2>
+      <h2 className="mb-1 heading-section">{t('opening.title')}</h2>
       <p className="mb-4 text-sm text-muted">{t('opening.help')}</p>
       {existing.isLoading ? (
         <Spinner />
       ) : bill ? (
         <div className="space-y-2">
           <Notice tone="info">{t('opening.recorded')}</Notice>
-          <Link to={`/bills/${bill.id}`} className="inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+          <Link to={`/bills/${bill.id}`} className="link-action">
             {t('opening.view')}
           </Link>
         </div>

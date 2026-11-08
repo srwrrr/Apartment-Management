@@ -3,19 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0f5c4d" />
+    <meta name="theme-color" content="#0a1512" />
     <title>You are offline</title>
     <style>
-      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f6f8f7; color: #16201d; font-family: system-ui, 'Noto Sans Bengali', 'Noto Sans', sans-serif; line-height: 1.5; text-align: center; }
-      main { padding: 24px; max-width: 26rem; }
-      h1 { margin: 0 0 8px; font-size: 1.6rem; color: #0f5c4d; }
-      p { margin: 0 0 20px; }
+      :root { color-scheme: dark; }
+      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0a1512; color: #eff6f3; font-family: system-ui, 'Noto Sans Bengali', 'Noto Sans', sans-serif; line-height: 1.5; text-align: center; }
+      main { margin: 16px; padding: 28px 24px; max-width: 26rem; border: 1px solid rgb(255 255 255 / 0.11); border-radius: 20px; background: #12231e; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.09); }
+      h1 { margin: 0 0 8px; font-size: 1.5rem; letter-spacing: -0.01em; }
+      p { margin: 0 0 20px; color: #a9bbb4; }
       #contacts { margin-top: 28px; text-align: start; }
-      #contacts h2 { margin: 0 0 8px; font-size: 1.2rem; color: #0f5c4d; }
+      #contacts h2 { margin: 0 0 8px; font-size: 1.1rem; }
       #contacts ul { list-style: none; margin: 0; padding: 0; }
-      #contacts li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; padding: 8px 0; border-top: 1px solid #d5dedb; }
-      #contacts a { color: #0b5546; font-weight: 700; }
-      button { min-height: 44px; padding: 8px 24px; border: 0; border-radius: 8px; background: #0f5c4d; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+      #contacts li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; padding: 8px 0; border-top: 1px solid rgb(255 255 255 / 0.11); }
+      #contacts a { color: #7ce8cb; font-weight: 700; }
+      button { min-height: 44px; padding: 8px 24px; border: 0; border-radius: 12px; background: #62dcbc; color: #04231b; font: inherit; font-weight: 600; cursor: pointer; }
+      :focus-visible { outline: 3px solid #9fd0ff; outline-offset: 2px; }
     </style>
   </head>
   <body>

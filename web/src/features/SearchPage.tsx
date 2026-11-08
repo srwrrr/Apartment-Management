@@ -13,8 +13,8 @@ import type { SearchResults } from '../lib/types';
 
 function Group({ title, children, testId }: { title: string; children: ReactNode; testId: string }) {
   return (
-    <Card className="!p-0">
-      <h2 className="border-b border-line px-4 py-2 text-lg font-bold">{title}</h2>
+    <Card className="card-flush">
+      <h2 className="border-b border-line px-4 py-2 heading-card">{title}</h2>
       <ul className="divide-y divide-line" data-testid={testId}>
         {children}
       </ul>
@@ -22,7 +22,7 @@ function Group({ title, children, testId }: { title: string; children: ReactNode
   );
 }
 
-const row = 'flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 hover:bg-brand-50';
+const row = 'flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 hover:bg-hover';
 
 /** FR-30: one box. What it finds depends on what this person may open; the server decides that. */
 export function SearchPage() {

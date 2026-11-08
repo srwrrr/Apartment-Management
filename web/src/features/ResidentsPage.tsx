@@ -155,13 +155,13 @@ export function ResidentsPage() {
       ) : query.data!.items.length === 0 ? (
         <p className="py-6 text-muted">{t('common.noResults')}</p>
       ) : (
-        <Card className="!p-0">
+        <Card className="card-flush">
           <ul className="divide-y divide-line">
             {query.data!.items.map((r) => (
               <li key={r.id}>
-                <Link to={`/residents/${r.id}`} className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-brand-50">
+                <Link to={`/residents/${r.id}`} className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-hover">
                   <span className="min-w-40 flex-1">
-                    <span className="block text-lg font-bold">{r.fullName}</span>
+                    <span className="block heading-card">{r.fullName}</span>
                     <span className="block text-sm text-muted">{r.phone}</span>
                   </span>
                   <span className="text-muted">

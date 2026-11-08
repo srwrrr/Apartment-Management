@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { formatBDT } from '@apt/shared';
 import { useAuth } from '../app/auth';
 import { Button, Card, Field, Notice, PageHeader, Spinner, TextInput, ScrollTable } from '../components/ui';
+import { MonthInput } from '../components/MonthInput';
 import { api, ApiError } from '../lib/api';
 import { errorMessage, fieldErrorsOf } from '../lib/errors';
 import { formatDate, monthLabel, thisMonth } from '../lib/format';
@@ -37,7 +38,7 @@ function usePeriod() {
 function CsvLink({ href }: { href: string }) {
   const { t } = useTranslation();
   return (
-    <a href={href} download className="no-print inline-flex min-h-11 items-center font-semibold text-brand-700 underline">
+    <a href={href} download className="no-print link-action">
       {t('reports.exportCsv')}
     </a>
   );
@@ -50,11 +51,11 @@ function Committee() {
   const [month, setMonth] = useState(to);
   return (
     <Card className="no-print mt-4">
-      <h2 className="mb-1 text-xl font-bold">{t('committee.title')}</h2>
+      <h2 className="mb-1 heading-section">{t('committee.title')}</h2>
       <p className="mb-3 text-muted">{t('committee.help')}</p>
       <div className="flex flex-wrap items-end gap-3">
-        <Field label={t('committee.month')}>{(p) => <TextInput {...p} type="month" value={month} onChange={(e) => setMonth(e.target.value)} />}</Field>
-        <a href={`/api/reports/committee.pdf?month=${month}`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700">
+        <Field label={t('committee.month')}>{(p) => <MonthInput {...p} value={month} onChange={(e) => setMonth(e.target.value)} />}</Field>
+        <a href={`/api/reports/committee.pdf?month=${month}`} target="_blank" rel="noopener" className="btn btn-primary">
           {t('committee.download')}
         </a>
       </div>
@@ -71,13 +72,13 @@ function Finance() {
   return (
     <Card>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-bold">{t('reports.finance')}</h2>
+        <h2 className="heading-section">{t('reports.finance')}</h2>
         <CsvLink href={`/api/reports/finance.csv?from=${from}&to=${to}`} />
       </div>
       <div className="mb-4 flex flex-wrap gap-4">
-        <Field label={t('reports.from')}>{(p) => <TextInput {...p} type="month" value={from} onChange={(e) => set('from', e.target.value)} />}</Field>
+        <Field label={t('reports.from')}>{(p) => <MonthInput {...p} value={from} onChange={(e) => set('from', e.target.value)} />}</Field>
         <Field label={t('reports.to')} error={fe.to}>
-          {(p) => <TextInput {...p} type="month" value={to} onChange={(e) => set('to', e.target.value)} />}
+          {(p) => <MonthInput {...p} value={to} onChange={(e) => set('to', e.target.value)} />}
         </Field>
       </div>
       {q.isLoading ? (
@@ -163,7 +164,7 @@ function Dues() {
   return (
     <Card className="mt-4">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-bold">{t('reports.dues')}</h2>
+        <h2 className="heading-section">{t('reports.dues')}</h2>
         <CsvLink href="/api/reports/dues.csv" />
       </div>
       {q.isLoading ? (
@@ -174,7 +175,7 @@ function Dues() {
         <p className="text-muted">{t('reports.noDues')}</p>
       ) : (
         <>
-          <p className="mb-3 text-lg font-bold" data-testid="dues-total">
+          <p className="mb-3 heading-card" data-testid="dues-total">
             {t('reports.totalOwed')}: {formatBDT(q.data!.totalOwed)}
           </p>
           <ScrollTable label={t('reports.dues')}>
@@ -229,7 +230,7 @@ function IncomeExpense() {
   const r = q.data;
   return (
     <Card className="mt-4">
-      <h2 className="mb-1 text-xl font-bold">{t('incomeExpense.title')}</h2>
+      <h2 className="mb-1 heading-section">{t('incomeExpense.title')}</h2>
       <p className="mb-3 text-sm text-muted">{t('incomeExpense.help')}</p>
       <ScrollTable label={t('incomeExpense.title')}>
         <table className="w-full min-w-[28rem]" data-testid="income-expense">
@@ -289,7 +290,7 @@ function Maintenance() {
   const stars = (s: number | null) => (s === null ? '—' : t('maintenanceReport.outOfFive', { rating: s }));
   return (
     <Card className="mt-4">
-      <h2 className="mb-3 text-xl font-bold">{t('maintenanceReport.title')}</h2>
+      <h2 className="mb-3 heading-section">{t('maintenanceReport.title')}</h2>
       {r.total === 0 ? (
         <p className="text-muted">{t('maintenanceReport.none')}</p>
       ) : (
@@ -390,7 +391,7 @@ function CertificateCheck() {
   const missing = check.error instanceof ApiError && check.error.status === 404;
   return (
     <Card className="no-print mt-4">
-      <h2 className="mb-3 text-xl font-bold">{t('certificate.lookup')}</h2>
+      <h2 className="mb-3 heading-section">{t('certificate.lookup')}</h2>
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e: FormEvent) => {
@@ -410,7 +411,7 @@ function CertificateCheck() {
           {t('certificate.genuine', { number: check.data.number, unit: check.data.unit.unitNumber, name: check.data.issuedTo.fullName, date: formatDate(check.data.issuedAt) })}
         </p>
       )}
-      {missing && <p className="mt-3 font-semibold text-danger-600">{t('certificate.notFound')}</p>}
+      {missing && <p className="mt-3 font-semibold text-danger">{t('certificate.notFound')}</p>}
       {check.isError && !missing && <div className="mt-3"><Notice>{errorMessage(t, check.error)}</Notice></div>}
     </Card>
   );
