@@ -237,19 +237,7 @@ sequenceDiagram
 
 ### Maintenance request life cycle (BR-16)
 
-```mermaid
-stateDiagram-v2
-  [*] --> Submitted : resident reports
-  [*] --> UnderReview : scheduled job
-  Submitted --> UnderReview : prioritised or assigned
-  Submitted --> Cancelled : resident cancels
-  Submitted --> Rejected : reviewer, with reason
-  UnderReview --> Rejected : reviewer, with reason
-  UnderReview --> InProgress : work starts
-  InProgress --> Resolved : with a note
-  Resolved --> Closed : resident confirms, or after 7 days
-  Resolved --> InProgress : resident says not fixed
-```
+The states of a maintenance request and the moves between them are shown in section 2.11.
 
 ### Background jobs
 
@@ -282,4 +270,316 @@ flowchart TB
 
 On every start, the container applies any new database migrations, makes sure the demo accounts exist, and serves the API and the web app on one port. Backup and restore scripts for a self-hosted install are in `scripts/` and tested in [docs/backup-and-restore.md](https://github.com/srwrrr/Apartment-Management/blob/main/docs/backup-and-restore.md).
 
-More diagrams (use cases, full class diagram, a scheduled-job sequence and the payment-report state model) are in [docs/diagrams](https://github.com/srwrrr/Apartment-Management/blob/main/docs/diagrams/README.md).
+More diagrams (the full class diagram and sequence diagrams) are in [docs/diagrams](https://github.com/srwrrr/Apartment-Management/blob/main/docs/diagrams/README.md).
+
+## 2.10 Use case model
+
+### Use case diagram
+
+![UML use case diagram: Resident, Staff and Administrator are kinds of User; the use cases sit inside the system boundary](images/use-case-diagram.png)
+
+Resident, Staff and Administrator are all kinds of User, so all three can log in, choose a language and read announcements. Staff can also carry out the administrator's use cases that the administrator has given them permission for (for example UC-12 with `payments.record`). The diagram source is [docs/diagrams/use-case-diagram.puml](https://github.com/srwrrr/Apartment-Management/blob/main/docs/diagrams/use-case-diagram.puml).
+
+### Use case narratives
+
+> **TO COMPLETE:** write the **Main flow** of each use case in your own words, as numbered steps (what the actor does, what the system does). Delete this note when done.
+
+#### UC-01 Log in
+
+| Item | Details |
+|---|---|
+| Actor | User (Resident, Staff or Administrator) |
+| Related requirement | FR-01, BR-02 |
+| Precondition | The user has an active account. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Wrong login ID or password: one general error, nothing says which part was wrong. Five wrong attempts in a row: the account is locked for 15 minutes. Deactivated account: login refused. Temporary password: the user must set a new password before anything else. |
+| Postcondition | The user is logged in and sees the home page for their role. |
+
+#### UC-02 Choose language
+
+| Item | Details |
+|---|---|
+| Actor | User |
+| Related requirement | FR-47, BR-28 |
+| Precondition | None (the switch is on the login page and in the user menu). |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Text that users typed (names, descriptions) stays as entered; only the interface is translated. |
+| Postcondition | The interface is shown in English or Bangla, and a logged-in user's choice is saved to their account. |
+
+#### UC-03 Read announcements and notifications
+
+| Item | Details |
+|---|---|
+| Actor | User |
+| Related requirement | FR-23, FR-25, FR-26 |
+| Precondition | The user is logged in. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Nothing new: an empty list is shown. Announcement past its end time: it appears under past announcements. |
+| Postcondition | Opened notifications are marked as read; the unread count on the bell goes down. |
+
+#### UC-04 View bills and payments
+
+| Item | Details |
+|---|---|
+| Actor | Resident |
+| Related requirement | FR-13, FR-14, BR-08 |
+| Precondition | The resident is logged in and has, or had, an occupancy in a unit. |
+| Main flow | [Write the steps in your own words] |
+| Extension point | **Download receipt PDF**: for any payment on a bill the resident can see. |
+| Alternative flows | No bills yet: an empty list is shown. A bill of another unit opened by changing the address: "not found". |
+| Postcondition | Nothing changes; this use case only reads data. |
+
+#### UC-05 Report a payment
+
+| Item | Details |
+|---|---|
+| Actor | Resident |
+| Related requirement | FR-39, BR-21 |
+| Precondition | The resident can see a bill that still has a balance. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Amount more than the balance minus other pending reports: refused. Missing transaction ID or date: the form shows the field to fix. Screenshot of the wrong type or over 5 MB: refused. |
+| Postcondition | A report is saved as **Pending**; the bill balance does not change until the office verifies it; the office is notified. |
+
+#### UC-06 Submit a maintenance request
+
+| Item | Details |
+|---|---|
+| Actor | Resident |
+| Related requirement | FR-16, FR-17, BR-19 |
+| Precondition | The resident is logged in and lives in a unit. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Missing title, description or category: the form shows which. More than 3 photos, or a photo of the wrong type or over 5 MB: refused. Resident with more than one unit: chooses the unit. |
+| Postcondition | The request is saved as **Submitted** with a request number; the administrator is notified. |
+
+#### UC-07 Confirm or reopen a request
+
+| Item | Details |
+|---|---|
+| Actor | Resident |
+| Related requirement | FR-35, FR-50, BR-18, BR-26 |
+| Precondition | The resident's own request is **Resolved**. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | No action for 7 days: the request closes automatically. Reopen: a comment is required and the request goes back to **In progress**. Optional 1–5 star rating when confirming. |
+| Postcondition | The request is **Closed**, or back **In progress**. |
+
+#### UC-08 Update an assigned request
+
+| Item | Details |
+|---|---|
+| Actor | Staff |
+| Related requirement | FR-20 |
+| Precondition | The request is assigned to this staff member. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Marking it **Resolved** without a resolution note: refused. A note marked internal: hidden from the resident. Moves not allowed by the state diagram (2.11) are not offered. |
+| Postcondition | The update is saved with the date, time and name; the resident is notified of status changes. |
+
+#### UC-09 Manage residents and units
+
+| Item | Details |
+|---|---|
+| Actor | Administrator (or staff with `residents.manage` / `units.manage`) |
+| Related requirement | FR-03, FR-04, FR-05, BR-04, BR-06 |
+| Precondition | The administrator is logged in. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Unit number already used, or login ID already used: refused with the field shown. Overlapping occupancy or end date before start date: refused. Deactivating a resident: their history is kept. |
+| Postcondition | The record is saved; a new resident gets a temporary password; the change is in the activity log. |
+
+#### UC-10 Manage staff permissions
+
+| Item | Details |
+|---|---|
+| Actor | Administrator |
+| Related requirement | FR-06 |
+| Precondition | The administrator is logged in. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Deactivating a staff member: they are logged out and can no longer log in. |
+| Postcondition | The new permissions apply from the staff member's next action, without logging out. |
+
+#### UC-11 Generate monthly bills
+
+| Item | Details |
+|---|---|
+| Actor | Administrator (or staff with `billing.manage`) |
+| Related requirement | FR-09, BR-07, BR-10 |
+| Precondition | Fees are set up and there are occupied units. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | A unit already billed for that month, unavailable, or with no fees: skipped, with the reason shown in the preview. Any failure while saving: no bills are created. |
+| Postcondition | One bill per occupied unit for the month; billing contacts are notified. |
+
+#### UC-12 Record or verify a payment
+
+| Item | Details |
+|---|---|
+| Actor | Administrator (or staff with `payments.record`) |
+| Related requirement | FR-11, FR-40, BR-11, BR-14 |
+| Precondition | The bill has a balance, or a resident's payment report is pending. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Amount zero, negative or above the balance: refused, with the balance shown. Date in the future: refused. Reference already used: a warning. Rejecting a report: a reason is required and the resident sees it. |
+| Postcondition | The payment is saved with a receipt number; the bill balance and status update; the resident is notified. |
+
+#### UC-13 Record an expense
+
+| Item | Details |
+|---|---|
+| Actor | Administrator (or staff with `expenses.manage`) |
+| Related requirement | FR-43, BR-23 |
+| Precondition | The administrator is logged in. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Missing amount, date, category or payee: the form shows which. A wrong expense: voided with a reason, never deleted. |
+| Postcondition | The expense is saved and appears in the expense list and the income and expense report. |
+
+#### UC-14 Prioritise and assign a request
+
+| Item | Details |
+|---|---|
+| Actor | Administrator (or staff with `maintenance.review` / `maintenance.assign`) |
+| Related requirement | FR-18, FR-19, BR-17 |
+| Precondition | A request is **Submitted** or **Under review**. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Rejecting the request: a reason is required and the resident is notified. Reassigning: the assignment history is kept. |
+| Postcondition | The request is **Under review** with a priority and an assigned staff member, who is notified. |
+
+#### UC-15 Publish an announcement
+
+| Item | Details |
+|---|---|
+| Actor | Administrator (or staff with `announcements.manage`) |
+| Related requirement | FR-23, FR-24, FR-51 |
+| Precondition | The administrator is logged in. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | Missing title or message: the form shows which. A future publish time: hidden, with no notifications, until then. |
+| Postcondition | The audience can see the announcement and gets a notification. |
+
+#### UC-16 View dashboard and reports
+
+| Item | Details |
+|---|---|
+| Actor | Administrator (or staff with `reports.view`) |
+| Related requirement | FR-15, FR-27, FR-28, FR-29 |
+| Precondition | The administrator is logged in. |
+| Main flow | [Write the steps in your own words] |
+| Alternative flows | No data for the chosen period: the figures show zero. The report can be exported as CSV or printed. |
+| Postcondition | Nothing changes; this use case only reads data. |
+
+## 2.11 State diagrams
+
+### Maintenance request
+
+```mermaid
+stateDiagram-v2
+  [*] --> Submitted : resident reports
+  [*] --> UnderReview : scheduled job
+  Submitted --> UnderReview : prioritised or assigned
+  Submitted --> Cancelled : resident cancels
+  Submitted --> Rejected : reviewer, with reason
+  UnderReview --> Rejected : reviewer, with reason
+  UnderReview --> InProgress : work starts
+  InProgress --> Resolved : with a note
+  Resolved --> Closed : resident confirms, or after 7 days
+  Resolved --> InProgress : resident says not fixed
+  Closed --> [*]
+  Cancelled --> [*]
+  Rejected --> [*]
+```
+
+### Bill
+
+A bill's status is never typed in; it is calculated from the balance and the due date (BR-09).
+
+```mermaid
+stateDiagram-v2
+  [*] --> Unpaid : bill generated
+  Unpaid --> PartiallyPaid : part paid
+  Unpaid --> Paid : fully paid
+  PartiallyPaid --> Paid : rest paid
+  Unpaid --> Overdue : due date passes
+  PartiallyPaid --> Overdue : due date passes
+  Overdue --> Paid : balance paid
+  Paid --> PartiallyPaid : payment voided or charge added
+  Paid --> Overdue : payment voided after due date
+```
+
+### Payment report
+
+```mermaid
+stateDiagram-v2
+  [*] --> Pending : resident reports a payment
+  Pending --> Verified : office confirms, payment recorded
+  Pending --> Rejected : office rejects, with reason
+  Verified --> [*]
+  Rejected --> [*]
+```
+
+### User account
+
+```mermaid
+stateDiagram-v2
+  [*] --> MustChangePassword : account created
+  MustChangePassword --> Active : user sets a new password
+  Active --> Locked : 5 wrong passwords in a row
+  Locked --> Active : 15 minutes pass
+  Active --> MustChangePassword : administrator resets the password
+  Active --> Deactivated : administrator deactivates, or move-out
+  Deactivated --> Active : administrator reactivates
+```
+
+## 2.12 Data flow diagrams
+
+### DFD Level 0 (context diagram)
+
+The whole system is one process. It exchanges data with three external entities.
+
+```mermaid
+flowchart LR
+  R[Resident]
+  A[Administrator]
+  T[Staff]
+  S((0<br/>Apartment<br/>Management<br/>System))
+  R -- "login details, payment reports, maintenance requests" --> S
+  S -- "bills, receipts, request updates, notifications" --> R
+  A -- "resident and unit details, payments, expenses, announcements" --> S
+  S -- "dashboard, reports, payment reports to verify" --> A
+  T -- "status updates and notes" --> S
+  S -- "assigned tasks, notifications" --> T
+```
+
+### DFD Level 1
+
+The same system split into its main processes and data stores.
+
+```mermaid
+flowchart TB
+  R[Resident]
+  A[Administrator]
+  T[Staff]
+  P1((1.0<br/>Manage users<br/>and units))
+  P2((2.0<br/>Billing and<br/>payments))
+  P3((3.0<br/>Maintenance))
+  P4((4.0<br/>Announcements and<br/>notifications))
+  P5((5.0<br/>Expenses and<br/>reports))
+  D1[["D1 Users, residents and units"]]
+  D2[["D2 Bills and payments"]]
+  D3[["D3 Maintenance requests"]]
+  D4[["D4 Announcements and notifications"]]
+  D5[["D5 Expenses"]]
+  A -- "resident, unit and staff details" --> P1
+  R -- "login details" --> P1
+  P1 <--> D1
+  A -- "billing month, payments" --> P2
+  R -- "payment reports" --> P2
+  P2 -- "bills and receipts" --> R
+  D1 -- "occupied units" --> P2
+  P2 <--> D2
+  R -- "requests and photos" --> P3
+  A -- "priority and assignment" --> P3
+  T -- "status updates" --> P3
+  P3 -- "assigned tasks" --> T
+  P3 <--> D3
+  A -- "announcements" --> P4
+  P4 -- "notifications" --> R
+  P4 <--> D4
+  A -- "expenses, report period" --> P5
+  P5 <--> D5
+  D2 -- "billed and collected" --> P5
+  P5 -- "dashboard and reports" --> A
+```
