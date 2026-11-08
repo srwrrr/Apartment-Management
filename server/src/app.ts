@@ -32,6 +32,9 @@ import { dashboardRouter, reportsRouter } from './modules/reports/reports.routes
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
+  // Behind a host's HTTPS proxy (Render): believe its X-Forwarded-* headers, so secure cookies are set
+  // and each visitor's own address is used for login rate limits.
+  if (config.TRUST_PROXY) app.set('trust proxy', 1);
   app.use(
     helmet({
       contentSecurityPolicy: {

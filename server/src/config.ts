@@ -15,6 +15,8 @@ const schema = z.object({
   DEMO_MODE: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
   /** Serve the built web app from this server, so one process and one port run everything. */
   SERVE_WEB: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  /** Set when a hosting proxy terminates HTTPS in front of this server (Render, for example). */
+  TRUST_PROXY: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
 });
 
 const parsed = schema.safeParse(process.env);

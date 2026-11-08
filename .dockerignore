@@ -1,0 +1,16 @@
+.git
+**/node_modules
+**/dist
+.env
+*.log
+server/uploads/*
+!server/uploads/.gitkeep
+server/.test-uploads
+backups
+coverage
+test-results
+playwright-report
+.vscode
+docs
+e2e
+e2e-pwa

@@ -546,6 +546,10 @@
   }
 
   /* Month picker: a calendar that works in every browser */
+  .picker-host {
+    position: relative;
+    z-index: 30;
+  }
   .picker-toggle {
     position: absolute;
     inset-block: 0;

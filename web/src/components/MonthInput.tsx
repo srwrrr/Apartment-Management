@@ -60,6 +60,14 @@ export function MonthInput({ value, onChange, required, disabled, ...field }: Pr
     close(true);
   };
 
+  // A glass card is its own layer, so a calendar inside one would sit under the next card; lift the card while it is open.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const host = wrap.current?.closest('.glass');
+    host?.classList.add('picker-host');
+    return () => host?.classList.remove('picker-host');
+  }, [open]);
+
   // Whatever does not fit is scrolled into view (a dialog scrolls itself, the page scrolls otherwise).
   useLayoutEffect(() => {
     if (!open) return;
